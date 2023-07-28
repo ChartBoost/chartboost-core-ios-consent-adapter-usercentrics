@@ -24,8 +24,8 @@ Follow these guides to create a detailed and effective report for us to understa
 * **Use a clear, concise, and descriptive title** for the issue that identifies the problem.
 * **Describe the steps with as much concise detail as possible to reproduce the problem**. For example, start by explaining how the Chartboost Core SDK was initialized and the method calls invoked afterwards.
 * **Provide specific examples to demonstrate each step**. Include links to files, screenshots, Charles logs, or copy/pasteable code snippets used in those examples. Use [markdown code blocks]([https://help.github.com/articles/markdown-basics/#multiple-lines](https://help.github.com/articles/markdown-basics/#multiple-lines)) when providing snippets.
-* **Describe the behavior(s)  observed** and explain why that behavior is a problem.
-* **Describe the behavior(s)  expected.**
+* **Describe the behavior(s) observed** and explain why that behavior is a problem.
+* **Describe the behavior(s) expected.**
 * **Include screenshots and animated GIFs** of the described steps and behaviors that demonstrate the problem.
 * **If you're reporting a crash**, include the crash report with a stack trace and in the issue using either a [code block](https://help.github.com/articles/markdown-basics/#multiple-lines), [file attachment](https://help.github.com/articles/file-attachments-on-issues-and-pull-requests/), or [gist](https://gist.github.com/) link.
 * **If the problem is related to performance or memory**, include a CPU profile capture.
