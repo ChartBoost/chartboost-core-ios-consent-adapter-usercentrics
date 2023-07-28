@@ -8,7 +8,7 @@ The Chartboost Core Usercentrics adapter mediates Usercentrics via the Chartboos
 | ------ | ------ |
 | Chartboost Core SDK | 0.0.0+ |
 | Cocoapods | 1.11.3+ |
-| iOS | 12.0+ |
+| iOS | 11.0+ |
 | Xcode | 14.1+ |
 
 ## Integration
