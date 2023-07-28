@@ -24,4 +24,7 @@ Pod::Spec.new do |spec|
 
   # CMP SDK and version that this adapter is certified to work with.
   spec.dependency 'UsercentricsUI', '~> 2.8.0'
+
+  # The CMP SDK is a static framework which requires the static_framework option.
+  spec.static_framework = true
 end
