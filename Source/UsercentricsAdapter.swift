@@ -237,7 +237,7 @@ public final class UsercentricsAdapter: ConsentAdapter {
             }
             if self.cachedConsentStatus != newConsentStatus {
                 self.cachedConsentStatus = newConsentStatus
-                self.observer?.onConsentStatusChange(consentStatus)
+                self.observer?.onConsentStatusChange(self.consentStatus)
             }
 
             // TCF string
