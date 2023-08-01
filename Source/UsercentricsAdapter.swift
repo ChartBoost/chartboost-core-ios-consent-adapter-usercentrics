@@ -52,8 +52,8 @@ public final class UsercentricsAdapter: ConsentAdapter {
     /// The latest USP string fetched value.
     private var cachedUSPString: String?
 
-    /// The latest CCPA string fetched value.
-    private var cachedCCPAString: ConsentValue?
+    /// The latest CCPA Opt-In string fetched value.
+    private var cachedCCPAOptInString: ConsentValue?
 
     /// The Usercentrics banner used to display consent dialogs.
     /// It may be customized by the user by modifying the static property ``UsercentricsAdapter.bannerSettings``.
@@ -106,7 +106,7 @@ public final class UsercentricsAdapter: ConsentAdapter {
         var consents: [ConsentStandard: ConsentValue] = [:]
         consents[.tcf] = cachedTCFString.map(ConsentValue.init(stringLiteral:))
         consents[.usp] = cachedUSPString.map(ConsentValue.init(stringLiteral:))
-        consents[.ccpa] = cachedCCPAString
+        consents[.ccpaOptIn] = cachedCCPAOptInString
         return consents
     }
 
@@ -258,16 +258,16 @@ public final class UsercentricsAdapter: ConsentAdapter {
                 self.observer?.onConsentChange(standard: .usp, value: newUSPString.map(ConsentValue.init(stringLiteral:)))
             }
 
-            // CCPA String
+            // CCPA Opt-In String
             let newCCPAString: ConsentValue?
             if let ccpaOptedOut = uspData.optedOut {
                 newCCPAString = ccpaOptedOut.boolValue ? .denied : .granted
             } else {
                 newCCPAString = nil
             }
-            if self.cachedCCPAString != newCCPAString {
-                self.cachedCCPAString = newCCPAString
-                self.observer?.onConsentChange(standard: .ccpa, value: newCCPAString)
+            if self.cachedCCPAOptInString != newCCPAString {
+                self.cachedCCPAOptInString = newCCPAString
+                self.observer?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
             }
 
         }, onFailure: { [weak self] error in
@@ -300,10 +300,10 @@ public final class UsercentricsAdapter: ConsentAdapter {
             self.observer?.onConsentChange(standard: .usp, value: nil)
         }
 
-        // CCPA String
-        if self.cachedCCPAString != nil {
-            self.cachedCCPAString = nil
-            self.observer?.onConsentChange(standard: .ccpa, value: nil)
+        // CCPA Opt-In String
+        if self.cachedCCPAOptInString != nil {
+            self.cachedCCPAOptInString = nil
+            self.observer?.onConsentChange(standard: .ccpaOptIn, value: nil)
         }
     }
 }
