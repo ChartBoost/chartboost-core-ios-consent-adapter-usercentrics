@@ -52,8 +52,8 @@ public final class UsercentricsAdapter: ConsentAdapter {
     /// The latest USP string fetched value.
     private var cachedUSPString: String?
 
-    /// The latest CCPA string fetched value.
-    private var cachedCCPAString: ConsentValue?
+    /// The latest CCPA Opt-In string fetched value.
+    private var cachedCCPAOptInString: ConsentValue?
 
     /// The Usercentrics banner used to display consent dialogs.
     /// It may be customized by the user by modifying the static property ``UsercentricsAdapter.bannerSettings``.
@@ -70,7 +70,7 @@ public final class UsercentricsAdapter: ConsentAdapter {
 
     public init(credentials: [String : Any]?) {
         self.options = Self.usercentricsOptions(from: credentials?["options"] as? [String: Any])
-        self.chartboostCoreDPSName = credentials?["coreDPSName"] as? String ?? Self.defaultChartboostCoreDPSName
+        self.chartboostCoreDPSName = credentials?["coreDpsName"] as? String ?? Self.defaultChartboostCoreDPSName
     }
 
     public func initialize(completion: @escaping (Error?) -> Void) {
@@ -106,28 +106,29 @@ public final class UsercentricsAdapter: ConsentAdapter {
         var consents: [ConsentStandard: ConsentValue] = [:]
         consents[.tcf] = cachedTCFString.map(ConsentValue.init(stringLiteral:))
         consents[.usp] = cachedUSPString.map(ConsentValue.init(stringLiteral:))
-        consents[.ccpa] = cachedCCPAString
+        consents[.ccpaOptIn] = cachedCCPAOptInString
         return consents
     }
 
-    public func setConsentStatus(_ status: ConsentStatus, completion: @escaping (Bool) -> Void) {
+    public func setConsentStatus(_ status: ConsentStatus, source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
         print("[Usercentrics Adapter] Setting consent status...")
         UsercentricsCore.isReady(onSuccess: { [weak self] _ in
+            guard let self else { return }
             // SDK ready
             switch status {
             case .granted:
                 // Accept all consents
-                print("[Usercentrics Adapter] Accept all explicit consents")
-                UsercentricsCore.shared.acceptAll(consentType: .explicit_)
+                print("[Usercentrics Adapter] Accept all consents")
+                UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self?.fetchConsentInfo()
+                self.fetchConsentInfo()
 
             case .denied:
                 // Accept all consents
-                print("[Usercentrics Adapter] Deny all explicit consents")
-                UsercentricsCore.shared.denyAll(consentType: .explicit_)
+                print("[Usercentrics Adapter] Deny all consents")
+                UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self?.fetchConsentInfo()
+                self.fetchConsentInfo()
 
             case .unknown:
                 // Reset all consents
@@ -135,10 +136,10 @@ public final class UsercentricsAdapter: ConsentAdapter {
                 UsercentricsCore.reset()
 
                 // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self?.resetCachedConsentInfo()
+                self.resetCachedConsentInfo()
 
                 // Usercentrics needs to be configured again after a call to reset()
-                self?.initialize(completion: { _ in })
+                self.initialize(completion: { _ in })
             }
             completion(true)
         }, onFailure: { error in
@@ -203,6 +204,18 @@ public final class UsercentricsAdapter: ConsentAdapter {
         )
     }
 
+    /// Maps a `ConsentStatusSource` value to a corresponding `UsercentricsConsentType` value.
+    private func usercentricsConsentType(from coreConsentStatusSource: ConsentStatusSource) -> UsercentricsConsentType {
+        switch coreConsentStatusSource {
+        case .user:
+            return .explicit_
+        case .developer:
+            return .implicit
+        default:
+            return .implicit
+        }
+    }
+
     /// Makes the adapter begin to receive consent updates from the Usercentrics SDK.
     private func startObservingConsentChanges() {
         print("[Usercentrics Adapter] Starting to observe consent changes")
@@ -258,16 +271,16 @@ public final class UsercentricsAdapter: ConsentAdapter {
                 self.observer?.onConsentChange(standard: .usp, value: newUSPString.map(ConsentValue.init(stringLiteral:)))
             }
 
-            // CCPA String
+            // CCPA Opt-In String
             let newCCPAString: ConsentValue?
             if let ccpaOptedOut = uspData.optedOut {
                 newCCPAString = ccpaOptedOut.boolValue ? .denied : .granted
             } else {
                 newCCPAString = nil
             }
-            if self.cachedCCPAString != newCCPAString {
-                self.cachedCCPAString = newCCPAString
-                self.observer?.onConsentChange(standard: .ccpa, value: newCCPAString)
+            if self.cachedCCPAOptInString != newCCPAString {
+                self.cachedCCPAOptInString = newCCPAString
+                self.observer?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
             }
 
         }, onFailure: { [weak self] error in
@@ -300,10 +313,10 @@ public final class UsercentricsAdapter: ConsentAdapter {
             self.observer?.onConsentChange(standard: .usp, value: nil)
         }
 
-        // CCPA String
-        if self.cachedCCPAString != nil {
-            self.cachedCCPAString = nil
-            self.observer?.onConsentChange(standard: .ccpa, value: nil)
+        // CCPA Opt-In String
+        if self.cachedCCPAOptInString != nil {
+            self.cachedCCPAOptInString = nil
+            self.observer?.onConsentChange(standard: .ccpaOptIn, value: nil)
         }
     }
 }
