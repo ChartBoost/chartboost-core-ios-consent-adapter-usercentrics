@@ -1,15 +1,15 @@
 Pod::Spec.new do |spec|
-  spec.name        = 'ChartboostCoreAdapterUsercentrics'
+  spec.name        = 'ChartboostCoreConsentAdapterUsercentrics'
   spec.version     = '0.2.8.0.0'
   spec.license     = { :type => 'MIT', :file => 'LICENSE.md' }
-  spec.homepage    = 'https://github.com/ChartBoost/chartboost-core-ios-cmp-usercentrics'
+  spec.homepage    = 'https://github.com/ChartBoost/chartboost-core-ios-consent-adapter-usercentrics'
   spec.authors     = { 'Chartboost' => 'https://www.chartboost.com/' }
   spec.summary     = 'Chartboost Core iOS SDK Usercentrics Adapter.'
   spec.description = 'Usercentrics CMP adapters for mediating through Chartboost Core.'
 
   # Source
-  spec.module_name  = 'ChartboostCoreAdapterUsercentrics'
-  spec.source       = { :git => 'https://github.com/ChartBoost/chartboost-core-ios-cmp-usercentrics.git', :tag => spec.version }
+  spec.module_name  = 'ChartboostCoreConsentAdapterUsercentrics'
+  spec.source       = { :git => 'https://github.com/ChartBoost/chartboost-core-ios-consent-adapter-usercentrics.git', :tag => spec.version }
   spec.source_files = 'Source/**/*.{swift}'
 
   # Minimum supported versions

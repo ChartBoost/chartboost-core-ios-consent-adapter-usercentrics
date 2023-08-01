@@ -15,7 +15,7 @@ The Chartboost Core Usercentrics adapter mediates Usercentrics via the Chartboos
 
 In your `Podfile`, add the following entry:
 ```
-pod 'ChartboostCoreAdapterUsercentrics'
+pod 'ChartboostCoreConsentAdapterUsercentrics'
 ```
 
 ## Contributions
