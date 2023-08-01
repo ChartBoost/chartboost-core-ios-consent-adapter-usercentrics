@@ -110,24 +110,25 @@ public final class UsercentricsAdapter: ConsentAdapter {
         return consents
     }
 
-    public func setConsentStatus(_ status: ConsentStatus, completion: @escaping (Bool) -> Void) {
+    public func setConsentStatus(_ status: ConsentStatus, source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
         print("[Usercentrics Adapter] Setting consent status...")
         UsercentricsCore.isReady(onSuccess: { [weak self] _ in
+            guard let self else { return }
             // SDK ready
             switch status {
             case .granted:
                 // Accept all consents
-                print("[Usercentrics Adapter] Accept all explicit consents")
-                UsercentricsCore.shared.acceptAll(consentType: .explicit_)
+                print("[Usercentrics Adapter] Accept all consents")
+                UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self?.fetchConsentInfo()
+                self.fetchConsentInfo()
 
             case .denied:
                 // Accept all consents
-                print("[Usercentrics Adapter] Deny all explicit consents")
-                UsercentricsCore.shared.denyAll(consentType: .explicit_)
+                print("[Usercentrics Adapter] Deny all consents")
+                UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self?.fetchConsentInfo()
+                self.fetchConsentInfo()
 
             case .unknown:
                 // Reset all consents
@@ -135,10 +136,10 @@ public final class UsercentricsAdapter: ConsentAdapter {
                 UsercentricsCore.reset()
 
                 // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self?.resetCachedConsentInfo()
+                self.resetCachedConsentInfo()
 
                 // Usercentrics needs to be configured again after a call to reset()
-                self?.initialize(completion: { _ in })
+                self.initialize(completion: { _ in })
             }
             completion(true)
         }, onFailure: { error in
@@ -201,6 +202,18 @@ public final class UsercentricsAdapter: ConsentAdapter {
             ruleSetId: dictionary["ruleSetId"] as? String ?? "",
             consentMediation: dictionary["consentMediation"] as? Bool ?? false
         )
+    }
+
+    /// Maps a `ConsentStatusSource` value to a corresponding `UsercentricsConsentType` value.
+    private func usercentricsConsentType(from coreConsentStatusSource: ConsentStatusSource) -> UsercentricsConsentType {
+        switch coreConsentStatusSource {
+        case .user:
+            return .explicit_
+        case .developer:
+            return .implicit
+        default:
+            return .implicit
+        }
     }
 
     /// Makes the adapter begin to receive consent updates from the Usercentrics SDK.
