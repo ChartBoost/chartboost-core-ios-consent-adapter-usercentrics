@@ -70,7 +70,7 @@ public final class UsercentricsAdapter: ConsentAdapter {
 
     public init(credentials: [String : Any]?) {
         self.options = Self.usercentricsOptions(from: credentials?["options"] as? [String: Any])
-        self.chartboostCoreDPSName = credentials?["coreDPSName"] as? String ?? Self.defaultChartboostCoreDPSName
+        self.chartboostCoreDPSName = credentials?["coreDpsName"] as? String ?? Self.defaultChartboostCoreDPSName
     }
 
     public func initialize(completion: @escaping (Error?) -> Void) {
