@@ -22,7 +22,7 @@ public final class UsercentricsAdapter: ConsentAdapter {
 
     public let moduleID = "usercentrics"
 
-    public let moduleVersion = "0.1.0"
+    public let moduleVersion = "0.2.8.0.0"
 
     public weak var observer: ConsentObserver?
 
