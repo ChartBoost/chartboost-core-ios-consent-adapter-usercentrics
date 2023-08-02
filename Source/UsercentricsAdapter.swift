@@ -1,9 +1,7 @@
+// Copyright 2022-2023 Chartboost, Inc.
 //
-//  UsercentricsAdapter.swift
-//  CoreCanary
-//
-//  Created by Daniel Barros on 7/27/23.
-//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
 
 import ChartboostCoreSDK
 import Usercentrics
@@ -22,7 +20,7 @@ public final class UsercentricsAdapter: ConsentAdapter {
 
     public let moduleID = "usercentrics"
 
-    public let moduleVersion = "0.1.0"
+    public let moduleVersion = "0.2.8.0.0"
 
     public weak var observer: ConsentObserver?
 
