@@ -14,5 +14,3 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: chartboost/chartboost-ios-adapter-actions/release-adapter@v1
-        with:
-          allow-warnings: true

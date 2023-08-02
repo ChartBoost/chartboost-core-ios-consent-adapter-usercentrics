@@ -16,5 +16,3 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: chartboost/chartboost-ios-adapter-actions/adapter-smoke-test@v1
-        with:
-          allow-warnings: true
