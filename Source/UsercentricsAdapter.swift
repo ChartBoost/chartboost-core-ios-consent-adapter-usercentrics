@@ -89,7 +89,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     ///
     /// - note: Modules should not perform costly operations on this initializer.
     /// Chartboost Core SDK may instantiate and discard several instances of the same module.
-    /// Chartboost Core SDK keeps strong references to modules is successfully initializes.
+    /// Chartboost Core SDK keeps strong references to modules it successfully initializes.
     public init(credentials: [String : Any]?) {
         self.options = Self.usercentricsOptions(from: credentials?["options"] as? [String: Any])
         self.chartboostCoreDPSName = credentials?["coreDpsName"] as? String ?? Self.defaultChartboostCoreDPSName
