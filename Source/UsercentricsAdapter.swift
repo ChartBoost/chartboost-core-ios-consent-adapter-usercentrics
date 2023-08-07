@@ -75,12 +75,12 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     public func initialize(completion: @escaping (Error?) -> Void) {
         // Fail if no options provided on init
         guard let options else {
-            print("[Usercentrics Adapter] Failed to initialize Usercentrics: no options available.")
+            log("Failed to initialize Usercentrics: no options available.", level: .error)
             completion(InitializationError.usercentricsOptionsNotAvailable)
             return
         }
         // Configure the SDK
-        print("[Usercentrics Adapter] Configuring SDK")
+        log("Configuring Usercentrics SDK", level: .debug)
         UsercentricsCore.configure(options: options)
 
         // Start observing consent changes and reporting updates to the observer object
@@ -110,28 +110,28 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     }
 
     public func setConsentStatus(_ status: ConsentStatus, source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
-        print("[Usercentrics Adapter] Setting consent status...")
+        log("Setting consent status...", level: .debug)
         UsercentricsCore.isReady(onSuccess: { [weak self] _ in
             guard let self else { return }
             // SDK ready
             switch status {
             case .granted:
                 // Accept all consents
-                print("[Usercentrics Adapter] Accept all consents")
+                self.log("Accept all consents", level: .debug)
                 UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
                 self.fetchConsentInfo()
 
             case .denied:
                 // Accept all consents
-                print("[Usercentrics Adapter] Deny all consents")
+                self.log("Deny all consents", level: .debug)
                 UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
                 self.fetchConsentInfo()
 
             case .unknown:
                 // Reset all consents
-                print("[Usercentrics Adapter] Reset")
+                self.log("Reset", level: .debug)
                 UsercentricsCore.reset()
 
                 // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
@@ -141,35 +141,35 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
                 self.initialize(completion: { _ in })
             }
             completion(true)
-        }, onFailure: { error in
+        }, onFailure: { [weak self] error in
             // SDK not ready
-            print("[Usercentrics Adapter] SDK not ready: \(error)")
+            self?.log("SDK not ready: \(error)", level: .error)
             completion(false)
         })
     }
 
     public func showConsentDialog(_ type: ConsentDialogType, from viewController: UIViewController, completion: @escaping (Bool) -> Void) {
-        print("[Usercentrics Adapter] Showing consent dialog...")
+        log("Showing consent dialog...", level: .debug)
         UsercentricsCore.isReady(onSuccess: { [weak self] _ in
             // SDK ready
             switch type {
             case .concise:
-                self?.banner.showFirstLayer(hostView: viewController) { userResponse in
-                    print("[Usercentrics Adapter] 1st layer response: \(userResponse)")
+                self?.banner.showFirstLayer(hostView: viewController) { [weak self] userResponse in
+                    self?.log("1st layer response: \(userResponse)", level: .trace)
                 }
                 completion(true)
             case .detailed:
-                self?.banner.showSecondLayer(hostView: viewController) { userResponse in
-                    print("[Usercentrics Adapter] 2nd layer response: \(userResponse)")
+                self?.banner.showSecondLayer(hostView: viewController) { [weak self] userResponse in
+                    self?.log("2nd layer response: \(userResponse)", level: .trace)
                 }
                 completion(true)
             default:
-                print("[Usercentrics Adapter] Unknown consent dialog type: \(type)")
+                self?.log("Unknown consent dialog type: \(type)", level: .warning)
                 completion(false)
             }
-        }, onFailure: { error in
+        }, onFailure: { [weak self] error in
             // SDK not ready
-            print("[Usercentrics Adapter] SDK not ready: \(error)")
+            self?.log("SDK not ready: \(error)", level: .error)
             completion(false)
         })
     }
@@ -217,11 +217,12 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     /// Makes the adapter begin to receive consent updates from the Usercentrics SDK.
     private func startObservingConsentChanges() {
-        print("[Usercentrics Adapter] Starting to observe consent changes")
+        log("Starting to observe consent changes", level: .debug)
 
         UsercentricsEvent.shared.onConsentUpdated { [weak self] payload in
-            print("[Usercentrics Adapter] onConsentUpdated with payload:\n\(payload)")
             guard let self else { return }
+
+            self.log("onConsentUpdated with payload:\n\(payload)", level: .trace)
 
             // We discard the payload and just pull all the info directly from the SDK.
             // The result should be the same, we do this to simplify our implementation and prevent
@@ -244,7 +245,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
             if let coreDPS = status.consents.first(where: { $0.dataProcessor == self.chartboostCoreDPSName }) {
                 newConsentStatus = coreDPS.status ? .granted : .denied
             } else {
-                print("[Usercentrics Adapter] ChartboostCore DPS not found in payload, expected one named '\(self.chartboostCoreDPSName)'")
+                log("ChartboostCore DPS not found in payload, expected one named '\(self.chartboostCoreDPSName)'", level: .error)
                 newConsentStatus = nil
             }
             if self.cachedConsentStatus != newConsentStatus {
@@ -284,7 +285,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
         }, onFailure: { [weak self] error in
             guard let self else { return }
-            print("[Usercentrics Adapter] SDK not ready: \(error)")
+            self.log("SDK not ready: \(error)", level: .error)
             self.resetCachedConsentInfo()
         })
     }
