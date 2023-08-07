@@ -12,7 +12,8 @@ import UsercentricsUI
 // Usercentrics SDK will crash if its APIs are used but the SDK is not ready.
 
 /// Chartboost Core Consent Usercentrics adapter.
-public final class UsercentricsAdapter: ConsentAdapter {
+@objc(ChartboostCoreUsercentricsAdapter)
+public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     public enum InitializationError: String, Error {
         case usercentricsOptionsNotAvailable
@@ -31,7 +32,7 @@ public final class UsercentricsAdapter: ConsentAdapter {
     let options: UsercentricsOptions?
 
     /// The default value for `chartboostCoreDPSName` when none is provided.
-    public static var defaultChartboostCoreDPSName = "ChartboostCore"
+    @objc public static var defaultChartboostCoreDPSName = "ChartboostCore"
 
     /// The settings provided when creating the Usercentrics banner.
     /// This property may be modified before the first call to ``showConsentDialog()`` to customize the banner created by the adapter.
