@@ -15,14 +15,21 @@ import UsercentricsUI
 @objc(ChartboostCoreUsercentricsAdapter)
 public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
+    /// UsercentricsAdapter initialization error.
     public enum InitializationError: String, Error {
+        /// Initialization failed because no `UsercentricsOptions` object was available.
         case usercentricsOptionsNotAvailable
     }
 
+    /// The module identifier.
     public let moduleID = "usercentrics"
 
+    /// The version of the module.
     public let moduleVersion = "0.2.8.0.0"
 
+    /// The observer to be notified whenever any change happens in the CMP consent status.
+    /// This observer is set by Core SDK and is an essential communication channel between Core and the CMP.
+    /// Adapters should not set it themselves.
     public weak var observer: ConsentObserver?
 
     /// The name of the Usercentrics Data Processing Service (DPS) defined in the Usercentrics dashboard for the Chartboost Core SDK.
@@ -74,11 +81,23 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         self.chartboostCoreDPSName = chartboostCoreDPSName
     }
 
+    /// The designated initializer for the module.
+    /// The Chartboost Core SDK will invoke this initializer when instantiating modules defined on
+    /// the dashboard through reflection.
+    /// - parameter credentials: A dictionary containing all the information required to initialize
+    /// this module, as defined on the Chartboost Core's dashboard.
+    ///
+    /// - note: Modules should not perform costly operations on this initializer.
+    /// Chartboost Core SDK may instantiate and discard several instances of the same module.
+    /// Chartboost Core SDK keeps strong references to modules is successfully initializes.
     public init(credentials: [String : Any]?) {
         self.options = Self.usercentricsOptions(from: credentials?["options"] as? [String: Any])
         self.chartboostCoreDPSName = credentials?["coreDpsName"] as? String ?? Self.defaultChartboostCoreDPSName
     }
 
+    /// Sets up the module to make it ready to be used.
+    /// - completion: A completion handler to be executed when the module is done initializing.
+    /// An error should be passed if the initialization failed, whereas `nil` should be passed if it succeeded.
     public func initialize(completion: @escaping (Error?) -> Void) {
         // Fail if no options provided on init
         guard let options else {
@@ -100,14 +119,25 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         completion(nil)
     }
 
+    /// Indicates whether the CMP has determined that consent should be collected from the user.
     public var shouldCollectConsent: Bool {
         cachedShouldCollectConsent ?? true
     }
 
+    /// The current consent status determined by the CMP.
     public var consentStatus: ConsentStatus {
         cachedConsentStatus ?? .unknown
     }
 
+    /// Detailed consent status for each consent standard, as determined by the CMP.
+    ///
+    /// Predefined consent standard constants, such as ``ConsentStandard.usp`` and ``ConsentStandard.tcf``, are provided
+    /// by Core. Adapters should use them when reporting the status of a common standard.
+    /// Custom standards should only be used by adapters when a corresponding constant is not provided by the Core.
+    ///
+    /// While Core also provides consent value constants, these are only applicable for the ``ConsentStandard.ccpa`` and
+    /// ``ConsentStandard.gdpr`` standards. For other standards a custom value should be provided (e.g. a IAB TCF string
+    /// for ``ConsentStandard.tcf``).
     public var consents: [ConsentStandard : ConsentValue] {
         var consents: [ConsentStandard: ConsentValue] = [:]
         consents[.tcf] = cachedTCFString.map(ConsentValue.init(stringLiteral:))
@@ -116,6 +146,16 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         return consents
     }
 
+    /// Informs the CMP of the new user consent status.
+    /// This method should be used only when a custom consent dialog is presented to the user, thereby making the publisher
+    /// responsible for the UI-side of collecting consent. In most cases ``showConsentDialog(_:from:completion:)``should
+    /// be used instead.
+    /// If the CMP does not support custom consent dialogs or the operation fails for any other reason, the completion
+    /// handler is executed with a `false` parameter.
+    /// - parameter status: The new consent status.
+    /// Pass ``ConsentStatus.unknown`` to reset a previously set consent. E.g. when the user changes.
+    /// - parameter source: The source of the new consent status. See the ``ConsentStatusSource`` documentation for more info.
+    /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
     public func setConsentStatus(_ status: ConsentStatus, source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
         print("[Usercentrics Adapter] Setting consent status...")
         UsercentricsCore.isReady(onSuccess: { [weak self] _ in
@@ -155,6 +195,12 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         })
     }
 
+    /// Instructs the CMP to present a consent dialog to the user for the purpose of collecting consent.
+    /// - parameter type: The type of consent dialog to present. See the ``ConsentDialogType`` documentation for more info.
+    /// If the CMP does not support a given type, it should default to whatever type it does support.
+    /// - parameter viewController: The view controller to present the consent dialog from.
+    /// - parameter completion: This handler is called to indicate whether the consent dialog was successfully presented or not.
+    /// Note that this is called at the moment the dialog is presented, **not when it is dismissed**.
     public func showConsentDialog(_ type: ConsentDialogType, from viewController: UIViewController, completion: @escaping (Bool) -> Void) {
         print("[Usercentrics Adapter] Showing consent dialog...")
         UsercentricsCore.isReady(onSuccess: { [weak self] _ in
