@@ -298,7 +298,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
             if let coreDPS = status.consents.first(where: { $0.dataProcessor == self.chartboostCoreDPSName }) {
                 newConsentStatus = coreDPS.status ? .granted : .denied
             } else {
-                log("ChartboostCore DPS not found in payload, expected one named '\(self.chartboostCoreDPSName)'", level: .error)
+                self.log("ChartboostCore DPS not found in payload, expected one named '\(self.chartboostCoreDPSName)'", level: .error)
                 newConsentStatus = nil
             }
             if self.cachedConsentStatus != newConsentStatus {
