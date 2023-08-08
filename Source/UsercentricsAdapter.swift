@@ -12,7 +12,8 @@ import UsercentricsUI
 // Usercentrics SDK will crash if its APIs are used but the SDK is not ready.
 
 /// Chartboost Core Consent Usercentrics adapter.
-@objc(ChartboostCoreUsercentricsAdapter)
+@objc(CBCUsercentricsAdapter)
+@objcMembers
 public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     /// UsercentricsAdapter initialization error.
@@ -39,7 +40,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     let options: UsercentricsOptions?
 
     /// The default value for `chartboostCoreDPSName` when none is provided.
-    @objc public static var defaultChartboostCoreDPSName = "ChartboostCore"
+    public static var defaultChartboostCoreDPSName = "ChartboostCore"
 
     /// The settings provided when creating the Usercentrics banner.
     /// This property may be modified before the first call to ``showConsentDialog()`` to customize the banner created by the adapter.
@@ -68,7 +69,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// Instantiates a UsercentricsAdapter module which can be passed on a call to ``ChartboostCore.initializeSDK()`
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
-    @objc public convenience init(options: UsercentricsOptions) {
+    public convenience init(options: UsercentricsOptions) {
         self.init(options: options, chartboostCoreDPSName: UsercentricsAdapter.defaultChartboostCoreDPSName)
     }
 
@@ -76,7 +77,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     /// - parameter chartboostCoreDPSName: The name for the Chartboost Core DPS that matches the one set on the Usercentrics dashboard.
-    @objc public init(options: UsercentricsOptions, chartboostCoreDPSName: String = UsercentricsAdapter.defaultChartboostCoreDPSName) {
+    public init(options: UsercentricsOptions, chartboostCoreDPSName: String = UsercentricsAdapter.defaultChartboostCoreDPSName) {
         self.options = options
         self.chartboostCoreDPSName = chartboostCoreDPSName
     }
