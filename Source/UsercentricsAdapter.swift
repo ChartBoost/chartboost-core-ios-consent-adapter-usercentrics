@@ -162,14 +162,14 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
         if status == .unknown {
             // Reset all consents
-            self.log("Reset", level: .debug)
+            log("Reset", level: .debug)
             UsercentricsCore.reset()
 
             // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
-            self.resetCachedConsentInfo()
+            resetCachedConsentInfo()
 
             // Usercentrics needs to be configured again after a call to reset()
-            self.initialize(completion: { _ in })
+            initialize(completion: { _ in })
 
             // Finish
             completion(true)
