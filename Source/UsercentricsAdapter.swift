@@ -169,6 +169,8 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
                 UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
                 self.fetchConsentInfo()
+                // Finish
+                completion(true)
 
             case .denied:
                 // Accept all consents
@@ -176,19 +178,30 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
                 UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
                 // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
                 self.fetchConsentInfo()
+                // Finish
+                completion(true)
 
             case .unknown:
-                // Reset all consents
-                self.log("Reset", level: .debug)
-                UsercentricsCore.reset()
+                // Dispatch asynchronously to let other isReady handlers get executed first.
+                // It's possible that multiple calls to `isReady()` are made before all of their handlers get called by the
+                // Usercentrics SDK. If we call `reset()` within a isReady handler it's possible that another handler gets
+                // executed right after and leads to a crash due to using `UsercentricsCore.shared` when Usercentrics is
+                // no longer ready.
+                DispatchQueue.main.async {
+                    // Reset all consents
+                    self.log("Reset", level: .debug)
+                    UsercentricsCore.reset()
 
-                // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self.resetCachedConsentInfo()
+                    // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
+                    self.resetCachedConsentInfo()
 
-                // Usercentrics needs to be configured again after a call to reset()
-                self.initialize(completion: { _ in })
+                    // Usercentrics needs to be configured again after a call to reset()
+                    self.initialize(completion: { _ in })
+
+                    // Finish
+                    completion(true)
+                }
             }
-            completion(true)
         }, onFailure: { [weak self] error in
             // SDK not ready
             self?.log("SDK not ready: \(error)", level: .error)
