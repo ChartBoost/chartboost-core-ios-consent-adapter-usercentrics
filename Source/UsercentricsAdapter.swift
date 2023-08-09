@@ -158,55 +158,52 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// - parameter source: The source of the new consent status. See the ``ConsentStatusSource`` documentation for more info.
     /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
     public func setConsentStatus(_ status: ConsentStatus, source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
-        log("Setting consent status...", level: .debug)
-        UsercentricsCore.isReady(onSuccess: { [weak self] _ in
-            guard let self else { return }
-            // SDK ready
-            switch status {
-            case .granted:
-                // Accept all consents
-                self.log("Accept all consents", level: .debug)
-                UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
-                // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self.fetchConsentInfo()
-                // Finish
-                completion(true)
+        log("Setting consent status to \(status)", level: .debug)
 
-            case .denied:
-                // Accept all consents
-                self.log("Deny all consents", level: .debug)
-                UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
-                // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self.fetchConsentInfo()
-                // Finish
-                completion(true)
+        if status == .unknown {
+            // Reset all consents
+            self.log("Reset", level: .debug)
+            UsercentricsCore.reset()
 
-            case .unknown:
-                // Dispatch asynchronously to let other isReady handlers get executed first.
-                // It's possible that multiple calls to `isReady()` are made before all of their handlers get called by the
-                // Usercentrics SDK. If we call `reset()` within a isReady handler it's possible that another handler gets
-                // executed right after and leads to a crash due to using `UsercentricsCore.shared` when Usercentrics is
-                // no longer ready.
-                DispatchQueue.main.async {
-                    // Reset all consents
-                    self.log("Reset", level: .debug)
-                    UsercentricsCore.reset()
+            // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
+            self.resetCachedConsentInfo()
 
-                    // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
-                    self.resetCachedConsentInfo()
+            // Usercentrics needs to be configured again after a call to reset()
+            self.initialize(completion: { _ in })
 
-                    // Usercentrics needs to be configured again after a call to reset()
-                    self.initialize(completion: { _ in })
+            // Finish
+            completion(true)
+        } else {
+            UsercentricsCore.isReady(onSuccess: { [weak self] _ in
+                guard let self else { return }
+                // SDK ready
+                switch status {
+                case .granted:
+                    // Accept all consents
+                    self.log("Accept all consents", level: .debug)
+                    UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
 
-                    // Finish
-                    completion(true)
+                    // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
+                    self.fetchConsentInfo()
+
+                case .denied:
+                    // Deny all consents
+                    self.log("Deny all consents", level: .debug)
+                    UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
+
+                    // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
+                    self.fetchConsentInfo()
+
+                case .unknown:
+                    assertionFailure("This case should have been handled before")
                 }
-            }
-        }, onFailure: { [weak self] error in
-            // SDK not ready
-            self?.log("SDK not ready: \(error)", level: .error)
-            completion(false)
-        })
+                completion(true)
+            }, onFailure: { [weak self] error in
+                // SDK not ready
+                self?.log("SDK not ready: \(error)", level: .error)
+                completion(false)
+            })
+        }
     }
 
     /// Instructs the CMP to present a consent dialog to the user for the purpose of collecting consent.
