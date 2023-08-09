@@ -158,42 +158,52 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// - parameter source: The source of the new consent status. See the ``ConsentStatusSource`` documentation for more info.
     /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
     public func setConsentStatus(_ status: ConsentStatus, source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
-        log("Setting consent status...", level: .debug)
-        UsercentricsCore.isReady(onSuccess: { [weak self] _ in
-            guard let self else { return }
-            // SDK ready
-            switch status {
-            case .granted:
-                // Accept all consents
-                self.log("Accept all consents", level: .debug)
-                UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
-                // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self.fetchConsentInfo()
+        log("Setting consent status to \(status)", level: .debug)
 
-            case .denied:
-                // Accept all consents
-                self.log("Deny all consents", level: .debug)
-                UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
-                // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self.fetchConsentInfo()
+        if status == .unknown {
+            // Reset all consents
+            log("Reset", level: .debug)
+            UsercentricsCore.reset()
 
-            case .unknown:
-                // Reset all consents
-                self.log("Reset", level: .debug)
-                UsercentricsCore.reset()
+            // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
+            resetCachedConsentInfo()
 
-                // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
-                self.resetCachedConsentInfo()
+            // Usercentrics needs to be configured again after a call to reset()
+            initialize(completion: { _ in })
 
-                // Usercentrics needs to be configured again after a call to reset()
-                self.initialize(completion: { _ in })
-            }
+            // Finish
             completion(true)
-        }, onFailure: { [weak self] error in
-            // SDK not ready
-            self?.log("SDK not ready: \(error)", level: .error)
-            completion(false)
-        })
+        } else {
+            UsercentricsCore.isReady(onSuccess: { [weak self] _ in
+                guard let self else { return }
+                // SDK ready
+                switch status {
+                case .granted:
+                    // Accept all consents
+                    self.log("Accept all consents", level: .debug)
+                    UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
+
+                    // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
+                    self.fetchConsentInfo()
+
+                case .denied:
+                    // Deny all consents
+                    self.log("Deny all consents", level: .debug)
+                    UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
+
+                    // Fetch consent info. Usercentrics does not report updates triggered by programmatic changes.
+                    self.fetchConsentInfo()
+
+                case .unknown:
+                    assertionFailure("This case should have been handled before")
+                }
+                completion(true)
+            }, onFailure: { [weak self] error in
+                // SDK not ready
+                self?.log("SDK not ready: \(error)", level: .error)
+                completion(false)
+            })
+        }
     }
 
     /// Instructs the CMP to present a consent dialog to the user for the purpose of collecting consent.
