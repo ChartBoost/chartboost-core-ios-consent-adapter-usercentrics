@@ -114,10 +114,11 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         startObservingConsentChanges()
 
         // Fetch the initial consent status
-        fetchConsentInfo()
-
-        // Report success immediately. If configuration fails it will be retried when calling any Usercentrics method.
-        completion(nil)
+        fetchConsentInfo() { _ in
+            // Report success after trying to fetch the initial consent info.
+            // If configuration fails it will be retried when calling any Usercentrics method.
+            completion(nil)
+        }
     }
 
     /// Indicates whether the CMP has determined that consent should be collected from the user.
@@ -297,7 +298,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     /// Pulls all the consent info from the Usercentrics SDK, saves it in the adapter's internal cache,
     /// and reports updates to the adapter observer.
-    private func fetchConsentInfo() {
+    private func fetchConsentInfo(completion: ((Error?) -> Void)? = nil) {
         UsercentricsCore.isReady(onSuccess: { [weak self] status in
             guard let self else { return }
 
@@ -347,10 +348,13 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
                 self.observer?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
             }
 
+            completion?(nil)
+
         }, onFailure: { [weak self] error in
             guard let self else { return }
             self.log("SDK not ready: \(error)", level: .error)
             self.resetCachedConsentInfo()
+            completion?(error)
         })
     }
 
