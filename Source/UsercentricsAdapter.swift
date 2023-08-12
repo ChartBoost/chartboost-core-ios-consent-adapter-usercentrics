@@ -102,7 +102,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     public func initialize(completion: @escaping (Error?) -> Void) {
         // Configure the SDK and fetch initial consent status.
         // We don't report consent changes to the delegate here since we are restoring the info from whatever the SDK has saved.
-        initializeAndUpdateConsentInfo(delegate: nil, completion: completion)
+        initializeAndUpdateConsentInfo(isFirstInitialization: true, delegate: nil, completion: completion)
     }
 
     /// Indicates whether the CMP has determined that consent should be collected from the user.
@@ -212,7 +212,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
         // Usercentrics needs to be configured again after a call to reset()
         // We do not pass a delegate here because we update the delegate later using the proxy if needed.
-        initializeAndFetchConsentInfo(clearingConsentOnFailureWithDelegate: nil) { [weak self] result in
+        initializeAndFetchConsentInfo(isFirstInitialization: true, clearingConsentOnFailureWithDelegate: nil) { [weak self] result in
             switch result {
             case .success(let status):
                 self?.updateCachedConsentInfo(with: status, delegate: self?.delegate)
@@ -263,7 +263,11 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     }
 
     /// Tries to initialize the Usercentrics SDK if it's not already, and clears the cached consent info on failure.
-    private func initializeAndFetchConsentInfo(clearingConsentOnFailureWithDelegate delegate: ConsentAdapterDelegate?, completion: @escaping (Result<UsercentricsReadyStatus, Error>) -> Void) {
+    private func initializeAndFetchConsentInfo(
+        isFirstInitialization: Bool = false,
+        clearingConsentOnFailureWithDelegate delegate: ConsentAdapterDelegate?,
+        completion: @escaping (Result<UsercentricsReadyStatus, Error>) -> Void
+    ) {
         // Fail if no options provided on init
         guard let options else {
             log("Failed to initialize Usercentrics: no options available.", level: .error)
@@ -271,12 +275,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
             return
         }
 
-        // Check if Usercentrics SDK is already initialized
-        UsercentricsCore.isReady(onSuccess: { status in
-            // SDK was already initialized
-            completion(.success(status))
-        }, onFailure: { [weak self] error in
-            // SDK not ready: try to initialize it
+        let initializeUsercentrics = { [weak self] in
             self?.log("Initializing Usercentrics SDK", level: .debug)
             UsercentricsCore.configure(options: options)
 
@@ -297,13 +296,35 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
                 completion(.failure(error))
             })
-        })
+        }
+
+        if isFirstInitialization {
+            // isReady() doesn't call its handlers if UsercentricsCore.configure() hasn't been called yet, so we must call
+            // it first if this is a first initialization
+            initializeUsercentrics()
+        } else {
+            // Otherwise we first check if Usercentrics SDK is already initialized
+            UsercentricsCore.isReady(onSuccess: { status in
+                // SDK was already initialized
+                completion(.success(status))
+            }, onFailure: { _ in
+                // SDK not ready: try to initialize it
+                initializeUsercentrics()
+            })
+        }
     }
 
     /// Tries to initialize the Usercentrics SDK if it's not already, updates the cached consent info if successful,
     /// and clears the cached consent info on failure.
-    private func initializeAndUpdateConsentInfo(delegate: ConsentAdapterDelegate?, completion: @escaping (Error?) -> Void) {
-        initializeAndFetchConsentInfo(clearingConsentOnFailureWithDelegate: delegate) { [weak self] result in
+    private func initializeAndUpdateConsentInfo(
+        isFirstInitialization: Bool = false,
+        delegate: ConsentAdapterDelegate?,
+        completion: @escaping (Error?) -> Void
+    ) {
+        initializeAndFetchConsentInfo(
+            isFirstInitialization: isFirstInitialization,
+            clearingConsentOnFailureWithDelegate: delegate
+        ) { [weak self] result in
             switch result {
             case .success(let status):
                 self?.updateCachedConsentInfo(with: status, delegate: delegate)
