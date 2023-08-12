@@ -22,6 +22,24 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         case usercentricsOptionsNotAvailable
     }
 
+    /// A set with the latest consent info obtained from the Usercentrics SDK.
+    struct CachedConsentInfo {
+        /// The latest shouldCollectConsent fetched value.
+        var shouldCollectConsent: Bool?
+
+        /// The latest consentStatus fetched value.
+        var consentStatus: ConsentStatus?
+
+        /// The latest TCF string fetched value.
+        var tcfString: String?
+
+        /// The latest USP string fetched value.
+        var uspString: String?
+
+        /// The latest CCPA Opt-In string fetched value.
+        var ccpaOptInString: ConsentValue?
+    }
+
     /// The module identifier.
     public let moduleID = "usercentrics"
 
@@ -47,24 +65,12 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// Changes afterwards have no effect.
     public static var bannerSettings: BannerSettings?
 
-    /// The latest shouldCollectConsent fetched value.
-    private var cachedShouldCollectConsent: Bool?
-
-    /// The latest consentStatus fetched value.
-    private var cachedConsentStatus: ConsentStatus?
-
-    /// The latest TCF string fetched value.
-    private var cachedTCFString: String?
-
-    /// The latest USP string fetched value.
-    private var cachedUSPString: String?
-
-    /// The latest CCPA Opt-In string fetched value.
-    private var cachedCCPAOptInString: ConsentValue?
-
     /// The Usercentrics banner used to display consent dialogs.
     /// It may be customized by the user by modifying the static property ``UsercentricsAdapter.bannerSettings``.
     private lazy var banner = UsercentricsBanner(bannerSettings: Self.bannerSettings)
+
+    /// The latest consent info fetched from the Usercentrics SDK.
+    private var cachedConsentInfo = CachedConsentInfo()
 
     /// Instantiates a UsercentricsAdapter module which can be passed on a call to ``ChartboostCore.initializeSDK()`
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
@@ -102,17 +108,17 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     public func initialize(completion: @escaping (Error?) -> Void) {
         // Configure the SDK and fetch initial consent status.
         // We don't report consent changes to the delegate here since we are restoring the info from whatever the SDK has saved.
-        initializeAndUpdateConsentInfo(isFirstInitialization: true, delegate: nil, completion: completion)
+        initializeAndUpdateConsentInfo(reportingChanges: false, isFirstInitialization: true, completion: completion)
     }
 
     /// Indicates whether the CMP has determined that consent should be collected from the user.
     public var shouldCollectConsent: Bool {
-        cachedShouldCollectConsent ?? true
+        cachedConsentInfo.shouldCollectConsent ?? true
     }
 
     /// The current consent status determined by the CMP.
     public var consentStatus: ConsentStatus {
-        cachedConsentStatus ?? .unknown
+        cachedConsentInfo.consentStatus ?? .unknown
     }
 
     /// Detailed consent status for each consent standard, as determined by the CMP.
@@ -126,9 +132,9 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// for ``ConsentStandard.tcf``).
     public var consents: [ConsentStandard : ConsentValue] {
         var consents: [ConsentStandard: ConsentValue] = [:]
-        consents[.tcf] = cachedTCFString.map(ConsentValue.init(stringLiteral:))
-        consents[.usp] = cachedUSPString.map(ConsentValue.init(stringLiteral:))
-        consents[.ccpaOptIn] = cachedCCPAOptInString
+        consents[.tcf] = cachedConsentInfo.tcfString.map(ConsentValue.init(stringLiteral:))
+        consents[.usp] = cachedConsentInfo.uspString.map(ConsentValue.init(stringLiteral:))
+        consents[.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
         return consents
     }
 
@@ -144,7 +150,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         log("Granting consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
-        initializeAndFetchConsentInfo(clearingConsentOnFailureWithDelegate: delegate) { [weak self] result in
+        initializeAndFetchConsentInfo(reportingChanges: true) { [weak self] result in
             guard let self else { return }
             switch result {
             case .success:
@@ -153,7 +159,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
                 self.log("Granted consent", level: .info)
 
                 // Fetch consent info again. Usercentrics does not report updates triggered by programmatic changes.
-                self.initializeAndUpdateConsentInfo(delegate: self.delegate) { error in
+                self.initializeAndUpdateConsentInfo(reportingChanges: true) { error in
                     completion(error == nil)
                 }
             case .failure:
@@ -174,7 +180,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         log("Denying consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
-        initializeAndFetchConsentInfo(clearingConsentOnFailureWithDelegate: delegate) { [weak self] result in
+        initializeAndFetchConsentInfo(reportingChanges: true) { [weak self] result in
             guard let self else { return }
             switch result {
             case .success:
@@ -183,7 +189,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
                 self.log("Denied consent", level: .info)
 
                 // Fetch consent info again. Usercentrics does not report updates triggered by programmatic changes.
-                self.initializeAndUpdateConsentInfo(delegate: self.delegate) { error in
+                self.initializeAndUpdateConsentInfo(reportingChanges: true) { error in
                     completion(error == nil)
                 }
             case .failure:
@@ -205,21 +211,13 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         // We do not report a consent change to the delegate here to prevent a call with "unknown" status
         // followed immediately by another one with "granted"/"denied" status once the new consent info is
         // fetched from Usercentrics in the next line.
-        // We do keep track of the callbacks with a delegate proxy and invoke them later if we fail to fetch
-        // the new consent info.
-        let delegateProxy = ConsentAdapterDelegateDelayProxy()
-        clearCachedConsentInfo(delegate: delegateProxy)
+        // We do keep track of the original cached info to trigger the proper callbacks afterwards.
+        let previousConsentInfo = cachedConsentInfo
+        clearCachedConsentInfo(reportingChanges: false, comparingTo: previousConsentInfo)
 
-        // Usercentrics needs to be configured again after a call to reset()
-        // We do not pass a delegate here because we update the delegate later using the proxy if needed.
-        initializeAndFetchConsentInfo(isFirstInitialization: true, clearingConsentOnFailureWithDelegate: nil) { [weak self] result in
-            switch result {
-            case .success(let status):
-                self?.updateCachedConsentInfo(with: status, delegate: self?.delegate)
-            case .failure:
-                // Report changes to a "unknown" consent info state if we failed to fetch the new info from Usercentrics
-                delegateProxy.relayReceivedCallbacks(to: self?.delegate)
-            }
+        // Usercentrics needs to be configured again after a call to reset(), thus we pass isFirstInitialization to true.
+        // We pass the original consent info before it got cleared so it's used to compare against and trigger proper delegate calls
+        initializeAndUpdateConsentInfo(reportingChanges: true, isFirstInitialization: true, comparingTo: previousConsentInfo) { [weak self] _ in
             // Finish with success, since even if we failed to fetch the new info the SDK was reset.
             self?.log("Reset consent", level: .info)
             completion(true)
@@ -236,7 +234,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         log("Showing \(type) consent dialog", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsBanner` is used and the SDK is not ready).
-        initializeAndFetchConsentInfo(clearingConsentOnFailureWithDelegate: delegate) { [weak self] result in
+        initializeAndFetchConsentInfo(reportingChanges: true) { [weak self] result in
             guard case .success = result else {
                 completion(false)
                 return
@@ -264,10 +262,13 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     /// Tries to initialize the Usercentrics SDK if it's not already, and clears the cached consent info on failure.
     private func initializeAndFetchConsentInfo(
+        reportingChanges: Bool,
         isFirstInitialization: Bool = false,
-        clearingConsentOnFailureWithDelegate delegate: ConsentAdapterDelegate?,
+        comparingTo previousInfo: CachedConsentInfo? = nil,
         completion: @escaping (Result<UsercentricsReadyStatus, Error>) -> Void
     ) {
+        let previousInfo = previousInfo ?? self.cachedConsentInfo
+
         // Fail if no options provided on init
         guard let options else {
             log("Failed to initialize Usercentrics: no options available.", level: .error)
@@ -292,7 +293,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
                 self?.log("Failed to initialize Usercentrics SDK with error: \(error)", level: .error)
 
                 // Clear cached consent info since it's now outdated
-                self?.clearCachedConsentInfo(delegate: delegate)
+                self?.clearCachedConsentInfo(reportingChanges: reportingChanges, comparingTo: previousInfo)
 
                 completion(.failure(error))
             })
@@ -317,17 +318,25 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// Tries to initialize the Usercentrics SDK if it's not already, updates the cached consent info if successful,
     /// and clears the cached consent info on failure.
     private func initializeAndUpdateConsentInfo(
+        reportingChanges: Bool,
         isFirstInitialization: Bool = false,
-        delegate: ConsentAdapterDelegate?,
+        comparingTo previousInfo: CachedConsentInfo? = nil,
         completion: @escaping (Error?) -> Void
     ) {
         initializeAndFetchConsentInfo(
+            reportingChanges: reportingChanges,
             isFirstInitialization: isFirstInitialization,
-            clearingConsentOnFailureWithDelegate: delegate
+            comparingTo: previousInfo
         ) { [weak self] result in
+            guard let self else { return }
+
             switch result {
             case .success(let status):
-                self?.updateCachedConsentInfo(with: status, delegate: delegate)
+                self.updateCachedConsentInfo(
+                    with: status,
+                    reportingChanges: reportingChanges,
+                    comparingTo: previousInfo ?? self.cachedConsentInfo
+                )
                 completion(nil)
             case .failure(let error):
                 completion(error)
@@ -389,16 +398,17 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
             // We discard the payload and just pull all the info directly from the SDK.
             // The result should be the same, we do this to simplify our implementation and prevent
             // data from getting out of sync.
-            self.initializeAndUpdateConsentInfo(delegate: self.delegate, completion: { _ in })
+            self.initializeAndUpdateConsentInfo(reportingChanges: true, completion: { _ in })
         }
     }
 
     /// Updates the cached consent info and reports updates to the indicated delegate.
-    private func updateCachedConsentInfo(with status: UsercentricsReadyStatus, delegate: ConsentAdapterDelegate?) {
+    private func updateCachedConsentInfo(with status: UsercentricsReadyStatus, reportingChanges: Bool, comparingTo previousInfo: CachedConsentInfo) {
         log("Updating consent info", level: .debug)
+        let gatedDelegate = reportingChanges ? delegate : nil
 
         // Should Collect Consent
-        cachedShouldCollectConsent = status.shouldCollectConsent
+        cachedConsentInfo.shouldCollectConsent = status.shouldCollectConsent
 
         // Consent Status
         let newConsentStatus: ConsentStatus?
@@ -408,27 +418,27 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
             log("ChartboostCore DPS not found in payload, expected one named '\(chartboostCoreDPSName)'", level: .error)
             newConsentStatus = nil
         }
-        if cachedConsentStatus != newConsentStatus {
-            cachedConsentStatus = newConsentStatus
-            delegate?.onConsentStatusChange(consentStatus)
+        cachedConsentInfo.consentStatus = newConsentStatus
+        if previousInfo.consentStatus != newConsentStatus {
+            gatedDelegate?.onConsentStatusChange(consentStatus)
         }
 
         // TCF string
         UsercentricsCore.shared.getTCFData { [weak self] tcfData in
             guard let self else { return }
             let newTCFString = tcfData.tcString.isEmpty ? nil : tcfData.tcString
-            if self.cachedTCFString != newTCFString {
-                self.cachedTCFString = newTCFString
-                delegate?.onConsentChange(standard: .tcf, value: newTCFString.map(ConsentValue.init(stringLiteral:)))
+            cachedConsentInfo.tcfString = newTCFString
+            if previousInfo.tcfString != newTCFString {
+                gatedDelegate?.onConsentChange(standard: .tcf, value: newTCFString.map(ConsentValue.init(stringLiteral:)))
             }
         }
 
         // USP String
         let uspData = UsercentricsCore.shared.getUSPData()
         let newUSPString = uspData.uspString.isEmpty ? nil : uspData.uspString
-        if cachedUSPString != newUSPString {
-            cachedUSPString = newUSPString
-            delegate?.onConsentChange(standard: .usp, value: newUSPString.map(ConsentValue.init(stringLiteral:)))
+        cachedConsentInfo.uspString = newUSPString
+        if previousInfo.uspString != newUSPString {
+            gatedDelegate?.onConsentChange(standard: .usp, value: newUSPString.map(ConsentValue.init(stringLiteral:)))
         }
 
         // CCPA Opt-In String
@@ -438,66 +448,42 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         } else {
             newCCPAString = nil
         }
-        if cachedCCPAOptInString != newCCPAString {
-            cachedCCPAOptInString = newCCPAString
-            delegate?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
+        cachedConsentInfo.ccpaOptInString = newCCPAString
+        if previousInfo.ccpaOptInString != newCCPAString {
+            gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
         }
     }
 
     /// Clears the adapter internal cache and reports updates to the delegate.
-    private func clearCachedConsentInfo(delegate: ConsentAdapterDelegate?) {
+    private func clearCachedConsentInfo(reportingChanges: Bool, comparingTo previousInfo: CachedConsentInfo) {
         log("Clearing consent info", level: .debug)
+        let gatedDelegate = reportingChanges ? delegate : nil
 
         // Should Collect Consent
-        self.cachedShouldCollectConsent = nil
+        cachedConsentInfo.shouldCollectConsent = nil
 
         // Consent Status
-        if self.cachedConsentStatus != nil {
-            self.cachedConsentStatus = nil
-            delegate?.onConsentStatusChange(consentStatus)
+        cachedConsentInfo.consentStatus = nil
+        if previousInfo.consentStatus != nil {
+            gatedDelegate?.onConsentStatusChange(consentStatus)
         }
 
         // TCF string
-        if self.cachedTCFString != nil {
-            self.cachedTCFString = nil
-            delegate?.onConsentChange(standard: .tcf, value: nil)
+        cachedConsentInfo.tcfString = nil
+        if previousInfo.tcfString != nil {
+            gatedDelegate?.onConsentChange(standard: .tcf, value: nil)
         }
 
         // USP String
-        if self.cachedUSPString != nil {
-            self.cachedUSPString = nil
-            delegate?.onConsentChange(standard: .usp, value: nil)
+        cachedConsentInfo.uspString = nil
+        if previousInfo.uspString != nil {
+            gatedDelegate?.onConsentChange(standard: .usp, value: nil)
         }
 
         // CCPA Opt-In String
-        if self.cachedCCPAOptInString != nil {
-            self.cachedCCPAOptInString = nil
-            delegate?.onConsentChange(standard: .ccpaOptIn, value: nil)
+        cachedConsentInfo.ccpaOptInString = nil
+        if previousInfo.ccpaOptInString != nil {
+            gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: nil)
         }
-    }
-}
-
-/// A delegate proxy that records all the calls made to it and allows to invoke them later using a
-/// different delegate.
-class ConsentAdapterDelegateDelayProxy: ConsentAdapterDelegate {
-
-    /// The callbacks made to the proxy.
-    private var delayedCallbacks: [(ConsentAdapterDelegate?) -> Void] = []
-
-    /// Performs all the recorded callbacks using the specified delegate.
-    func relayReceivedCallbacks(to delegate: ConsentAdapterDelegate?) {
-        delayedCallbacks.forEach { $0(delegate) }
-    }
-
-    func onConsentStatusChange(_ status: ConsentStatus) {
-        delayedCallbacks.append({ delegate in
-            delegate?.onConsentStatusChange(status)
-        })
-    }
-
-    func onConsentChange(standard: ConsentStandard, value: ConsentValue?) {
-        delayedCallbacks.append({ delegate in
-            delegate?.onConsentChange(standard: standard, value: value)
-        })
     }
 }
