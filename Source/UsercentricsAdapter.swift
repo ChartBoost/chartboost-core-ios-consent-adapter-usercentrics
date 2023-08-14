@@ -51,12 +51,6 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// Adapters should not set it themselves.
     public weak var delegate: ConsentAdapterDelegate?
 
-    /// The name of the Usercentrics Data Processing Service (DPS) defined in the Usercentrics dashboard for the Chartboost Core SDK.
-    let chartboostCoreDPSName: String
-
-    /// The Usercentrics options used to configure the Usercentrics SDK.
-    let options: UsercentricsOptions?
-
     /// The default value for `chartboostCoreDPSName` when none is provided.
     public static var defaultChartboostCoreDPSName = "ChartboostCore"
 
@@ -64,6 +58,12 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// This property may be modified before the first call to ``showConsentDialog()`` to customize the banner created by the adapter.
     /// Changes afterwards have no effect.
     public static var bannerSettings: BannerSettings?
+
+    /// The name of the Usercentrics Data Processing Service (DPS) defined in the Usercentrics dashboard for the Chartboost Core SDK.
+    private let chartboostCoreDPSName: String
+
+    /// The Usercentrics options used to configure the Usercentrics SDK.
+    private let options: UsercentricsOptions?
 
     /// The Usercentrics banner used to display consent dialogs.
     /// It may be customized by the user by modifying the static property ``UsercentricsAdapter.bannerSettings``.
