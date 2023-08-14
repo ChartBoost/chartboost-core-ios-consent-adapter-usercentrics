@@ -57,7 +57,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     public static var defaultChartboostCoreDPSName = "ChartboostCore"
 
     /// The settings provided when creating the Usercentrics banner.
-    /// This property may be modified before the first call to ``showConsentDialog()`` to customize the banner created by the adapter.
+    /// This property may be modified before the first call to ``showConsentDialog(_:from:completion:)`` to customize the banner created by the adapter.
     /// Changes afterwards have no effect.
     public static var bannerSettings: BannerSettings?
 
@@ -86,13 +86,13 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     /// Detailed consent status for each consent standard, as determined by the CMP.
     ///
-    /// Predefined consent standard constants, such as ``ConsentStandard.usp`` and ``ConsentStandard.tcf``, are provided
+    /// Predefined consent standard constants, such as ``ConsentStandard/usp`` and ``ConsentStandard/tcf``, are provided
     /// by Core. Adapters should use them when reporting the status of a common standard.
     /// Custom standards should only be used by adapters when a corresponding constant is not provided by the Core.
     ///
-    /// While Core also provides consent value constants, these are only applicable for the ``ConsentStandard.ccpa`` and
-    /// ``ConsentStandard.gdpr`` standards. For other standards a custom value should be provided (e.g. a IAB TCF string
-    /// for ``ConsentStandard.tcf``).
+    /// While Core also provides consent value constants, these are only applicable for the ``ConsentStandard/ccpa`` and
+    /// ``ConsentStandard/gdpr`` standards. For other standards a custom value should be provided (e.g. a IAB TCF string
+    /// for ``ConsentStandard/tcf``).
     public var consents: [ConsentStandard : ConsentValue] {
         var consents: [ConsentStandard: ConsentValue] = [:]
         consents[.tcf] = cachedConsentInfo.tcfString.map(ConsentValue.init(stringLiteral:))
@@ -103,14 +103,14 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     // MARK: - Instantiation and Initialization
 
-    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore.initializeSDK()``.
+    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     public convenience init(options: UsercentricsOptions) {
         self.init(options: options, chartboostCoreDPSName: UsercentricsAdapter.defaultChartboostCoreDPSName)
     }
 
-    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore.initializeSDK()``.
+    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     /// - parameter chartboostCoreDPSName: The name for the Chartboost Core DPS that matches the one set on the Usercentrics dashboard.
