@@ -431,7 +431,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         UsercentricsCore.shared.getTCFData { [weak self] tcfData in
             guard let self else { return }
             let newTCFString = tcfData.tcString.isEmpty ? nil : tcfData.tcString
-            cachedConsentInfo.tcfString = newTCFString
+            self.cachedConsentInfo.tcfString = newTCFString
             if previousInfo.tcfString != newTCFString {
                 gatedDelegate?.onConsentChange(standard: .tcf, value: newTCFString.map(ConsentValue.init(stringLiteral:)))
             }
