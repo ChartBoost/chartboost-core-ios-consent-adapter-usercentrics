@@ -146,7 +146,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
     /// Informs the CMP that the user has granted consent.
     /// This method should be used only when a custom consent dialog is presented to the user, thereby making the publisher
-    /// responsible for the UI-side of collecting consent. In most cases ``showConsentDialog(_:from:completion:)``should
+    /// responsible for the UI-side of collecting consent. In most cases ``showConsentDialog(_:from:completion:)`` should
     /// be used instead.
     /// If the CMP does not support custom consent dialogs or the operation fails for any other reason, the completion
     /// handler is executed with a `false` parameter.
