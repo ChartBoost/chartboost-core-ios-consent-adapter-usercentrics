@@ -72,6 +72,33 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// The latest consent info fetched from the Usercentrics SDK.
     private var cachedConsentInfo = CachedConsentInfo()
 
+    /// Indicates whether the CMP has determined that consent should be collected from the user.
+    public var shouldCollectConsent: Bool {
+        cachedConsentInfo.shouldCollectConsent ?? true
+    }
+
+    /// The current consent status determined by the CMP.
+    public var consentStatus: ConsentStatus {
+        cachedConsentInfo.consentStatus ?? .unknown
+    }
+
+    /// Detailed consent status for each consent standard, as determined by the CMP.
+    ///
+    /// Predefined consent standard constants, such as ``ConsentStandard.usp`` and ``ConsentStandard.tcf``, are provided
+    /// by Core. Adapters should use them when reporting the status of a common standard.
+    /// Custom standards should only be used by adapters when a corresponding constant is not provided by the Core.
+    ///
+    /// While Core also provides consent value constants, these are only applicable for the ``ConsentStandard.ccpa`` and
+    /// ``ConsentStandard.gdpr`` standards. For other standards a custom value should be provided (e.g. a IAB TCF string
+    /// for ``ConsentStandard.tcf``).
+    public var consents: [ConsentStandard : ConsentValue] {
+        var consents: [ConsentStandard: ConsentValue] = [:]
+        consents[.tcf] = cachedConsentInfo.tcfString.map(ConsentValue.init(stringLiteral:))
+        consents[.usp] = cachedConsentInfo.uspString.map(ConsentValue.init(stringLiteral:))
+        consents[.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
+        return consents
+    }
+
     /// Instantiates a UsercentricsAdapter module which can be passed on a call to ``ChartboostCore.initializeSDK()`
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
@@ -109,33 +136,6 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         // Configure the SDK and fetch initial consent status.
         // We don't report consent changes to the delegate here since we are restoring the info from whatever the SDK has saved.
         initializeAndUpdateConsentInfo(reportingChanges: false, isFirstInitialization: true, completion: completion)
-    }
-
-    /// Indicates whether the CMP has determined that consent should be collected from the user.
-    public var shouldCollectConsent: Bool {
-        cachedConsentInfo.shouldCollectConsent ?? true
-    }
-
-    /// The current consent status determined by the CMP.
-    public var consentStatus: ConsentStatus {
-        cachedConsentInfo.consentStatus ?? .unknown
-    }
-
-    /// Detailed consent status for each consent standard, as determined by the CMP.
-    ///
-    /// Predefined consent standard constants, such as ``ConsentStandard.usp`` and ``ConsentStandard.tcf``, are provided
-    /// by Core. Adapters should use them when reporting the status of a common standard.
-    /// Custom standards should only be used by adapters when a corresponding constant is not provided by the Core.
-    ///
-    /// While Core also provides consent value constants, these are only applicable for the ``ConsentStandard.ccpa`` and
-    /// ``ConsentStandard.gdpr`` standards. For other standards a custom value should be provided (e.g. a IAB TCF string
-    /// for ``ConsentStandard.tcf``).
-    public var consents: [ConsentStandard : ConsentValue] {
-        var consents: [ConsentStandard: ConsentValue] = [:]
-        consents[.tcf] = cachedConsentInfo.tcfString.map(ConsentValue.init(stringLiteral:))
-        consents[.usp] = cachedConsentInfo.uspString.map(ConsentValue.init(stringLiteral:))
-        consents[.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
-        return consents
     }
 
     /// Informs the CMP that the user has granted consent.
