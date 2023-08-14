@@ -150,20 +150,18 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         log("Granting consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
-        initializeAndFetchConsentInfo(reportingChanges: true) { [weak self] result in
-            guard let self else { return }
-            switch result {
-            case .success:
-                // Grant consent
-                UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
-                self.log("Granted consent", level: .info)
-
-                // Fetch consent info again. Usercentrics does not report updates triggered by programmatic changes.
-                self.initializeAndUpdateConsentInfo(reportingChanges: true) { error in
-                    completion(error == nil)
-                }
-            case .failure:
+        initializeAndUpdateConsentInfo(reportingChanges: true) { [weak self] error in
+            guard let self, error == nil else {
                 completion(false)
+                return
+            }
+            // Grant consent
+            UsercentricsCore.shared.acceptAll(consentType: self.usercentricsConsentType(from: source))
+            self.log("Granted consent", level: .info)
+
+            // Fetch consent info again. Usercentrics does not report updates triggered by programmatic changes.
+            self.initializeAndUpdateConsentInfo(reportingChanges: true) { error in
+                completion(error == nil)
             }
         }
     }
@@ -180,20 +178,18 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         log("Denying consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
-        initializeAndFetchConsentInfo(reportingChanges: true) { [weak self] result in
-            guard let self else { return }
-            switch result {
-            case .success:
-                // Deny consent
-                UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
-                self.log("Denied consent", level: .info)
-
-                // Fetch consent info again. Usercentrics does not report updates triggered by programmatic changes.
-                self.initializeAndUpdateConsentInfo(reportingChanges: true) { error in
-                    completion(error == nil)
-                }
-            case .failure:
+        initializeAndUpdateConsentInfo(reportingChanges: true) { [weak self] error in
+            guard let self, error == nil else {
                 completion(false)
+                return
+            }
+            // Deny consent
+            UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
+            self.log("Denied consent", level: .info)
+
+            // Fetch consent info again. Usercentrics does not report updates triggered by programmatic changes.
+            self.initializeAndUpdateConsentInfo(reportingChanges: true) { error in
+                completion(error == nil)
             }
         }
     }
@@ -234,27 +230,27 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         log("Showing \(type) consent dialog", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsBanner` is used and the SDK is not ready).
-        initializeAndFetchConsentInfo(reportingChanges: true) { [weak self] result in
-            guard case .success = result else {
+        initializeAndUpdateConsentInfo(reportingChanges: true) { [weak self] error in
+            guard let self, error == nil else {
                 completion(false)
                 return
             }
             // Show the dialog
             switch type {
             case .concise:
-                self?.banner.showFirstLayer(hostView: viewController) { [weak self] userResponse in
+                self.banner.showFirstLayer(hostView: viewController) { [weak self] userResponse in
                     self?.log("1st layer response: \(userResponse)", level: .trace)
                 }
-                self?.log("Showed \(type) consent dialog", level: .info)
+                self.log("Showed \(type) consent dialog", level: .info)
                 completion(true)
             case .detailed:
-                self?.banner.showSecondLayer(hostView: viewController) { [weak self] userResponse in
+                self.banner.showSecondLayer(hostView: viewController) { [weak self] userResponse in
                     self?.log("2nd layer response: \(userResponse)", level: .trace)
                 }
-                self?.log("Showed \(type) consent dialog", level: .info)
+                self.log("Showed \(type) consent dialog", level: .info)
                 completion(true)
             default:
-                self?.log("Could not show consent dialog with unknown type: \(type)", level: .error)
+                self.log("Could not show consent dialog with unknown type: \(type)", level: .error)
                 completion(false)
             }
         }
