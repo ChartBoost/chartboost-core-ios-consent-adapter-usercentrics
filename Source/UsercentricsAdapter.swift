@@ -16,18 +16,18 @@ import UsercentricsUI
 @objcMembers
 public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
-    /// UsercentricsAdapter initialization error.
+    /// ``UsercentricsAdapter`` initialization error.
     public enum InitializationError: String, Error {
         /// Initialization failed because no `UsercentricsOptions` object was available.
         case usercentricsOptionsNotAvailable
     }
 
     /// A set with the latest consent info obtained from the Usercentrics SDK.
-    struct CachedConsentInfo {
-        /// The latest shouldCollectConsent fetched value.
+    private struct CachedConsentInfo {
+        /// The latest `shouldCollectConsent` fetched value.
         var shouldCollectConsent: Bool?
 
-        /// The latest consentStatus fetched value.
+        /// The latest `consentStatus` fetched value.
         var consentStatus: ConsentStatus?
 
         /// The latest TCF string fetched value.
@@ -39,6 +39,8 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         /// The latest CCPA Opt-In string fetched value.
         var ccpaOptInString: ConsentValue?
     }
+
+    // MARK: - Properties
 
     /// The module identifier.
     public let moduleID = "usercentrics"
@@ -99,14 +101,16 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         return consents
     }
 
-    /// Instantiates a UsercentricsAdapter module which can be passed on a call to ``ChartboostCore.initializeSDK()`
+    // MARK: - Instantiation and Initialization
+
+    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore.initializeSDK()``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     public convenience init(options: UsercentricsOptions) {
         self.init(options: options, chartboostCoreDPSName: UsercentricsAdapter.defaultChartboostCoreDPSName)
     }
 
-    /// Instantiates a UsercentricsAdapter module which can be passed on a call to ``ChartboostCore.initializeSDK()`
+    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore.initializeSDK()``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     /// - parameter chartboostCoreDPSName: The name for the Chartboost Core DPS that matches the one set on the Usercentrics dashboard.
@@ -138,6 +142,8 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         initializeAndUpdateConsentInfo(reportingChanges: false, isFirstInitialization: true, completion: completion)
     }
 
+    // MARK: - Consent
+
     /// Informs the CMP that the user has granted consent.
     /// This method should be used only when a custom consent dialog is presented to the user, thereby making the publisher
     /// responsible for the UI-side of collecting consent. In most cases ``showConsentDialog(_:from:completion:)``should
@@ -146,7 +152,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// handler is executed with a `false` parameter.
     /// - parameter source: The source of the new consent. See the ``ConsentStatusSource`` documentation for more info.
     /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
-    public func grantConsent(source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
+    public func grantConsent(source: ConsentStatusSource, completion: @escaping (_ succeeded: Bool) -> Void) {
         log("Granting consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
@@ -174,7 +180,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// handler is executed with a `false` parameter.
     /// - parameter source: The source of the new consent. See the ``ConsentStatusSource`` documentation for more info.
     /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
-    public func denyConsent(source: ConsentStatusSource, completion: @escaping (Bool) -> Void) {
+    public func denyConsent(source: ConsentStatusSource, completion: @escaping (_ succeeded: Bool) -> Void) {
         log("Denying consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
@@ -195,10 +201,10 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     }
 
     /// Informs the CMP that the given consent should be reset.
-    /// If the CMP does not support the reset() function or the operation fails for any other reason, the completion
+    /// If the CMP does not support the `reset()` function or the operation fails for any other reason, the completion
     /// handler is executed with a `false` parameter.
     /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
-    public func resetConsent(completion: @escaping (Bool) -> Void) {
+    public func resetConsent(completion: @escaping (_ succeeded: Bool) -> Void) {
         // Reset all consents
         log("Resetting consent", level: .debug)
         UsercentricsCore.reset()
@@ -211,7 +217,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         let previousConsentInfo = cachedConsentInfo
         clearCachedConsentInfo(reportingChanges: false, comparingTo: previousConsentInfo)
 
-        // Usercentrics needs to be configured again after a call to reset(), thus we pass isFirstInitialization to true.
+        // Usercentrics needs to be configured again after a call to `reset()`, thus we pass `isFirstInitialization` to true.
         // We pass the original consent info before it got cleared so it's used to compare against and trigger proper delegate calls
         initializeAndUpdateConsentInfo(reportingChanges: true, isFirstInitialization: true, comparingTo: previousConsentInfo) { [weak self] _ in
             // Finish with success, since even if we failed to fetch the new info the SDK was reset.
@@ -226,7 +232,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// - parameter viewController: The view controller to present the consent dialog from.
     /// - parameter completion: This handler is called to indicate whether the consent dialog was successfully presented or not.
     /// Note that this is called at the moment the dialog is presented, **not when it is dismissed**.
-    public func showConsentDialog(_ type: ConsentDialogType, from viewController: UIViewController, completion: @escaping (Bool) -> Void) {
+    public func showConsentDialog(_ type: ConsentDialogType, from viewController: UIViewController, completion: @escaping (_ succeeded: Bool) -> Void) {
         log("Showing \(type) consent dialog", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsBanner` is used and the SDK is not ready).
@@ -256,6 +262,8 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         }
     }
 
+    // MARK: - Private Func
+
     /// Tries to initialize the Usercentrics SDK if it's not already, and clears the cached consent info on failure.
     private func initializeAndFetchConsentInfo(
         reportingChanges: Bool,
@@ -263,7 +271,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         comparingTo previousInfo: CachedConsentInfo? = nil,
         completion: @escaping (Result<UsercentricsReadyStatus, Error>) -> Void
     ) {
-        let previousInfo = previousInfo ?? self.cachedConsentInfo
+        let previousInfo = previousInfo ?? cachedConsentInfo
 
         // Fail if no options provided on init
         guard let options else {
@@ -296,7 +304,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         }
 
         if isFirstInitialization {
-            // isReady() doesn't call its handlers if UsercentricsCore.configure() hasn't been called yet, so we must call
+            // `isReady()` doesn't call its handlers if `UsercentricsCore.configure()` hasn't been called yet, so we must call
             // it first if this is a first initialization
             initializeUsercentrics()
         } else {
@@ -340,7 +348,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         }
     }
 
-    /// Creates a UsercentricsOptions object with the dashboard information provided in a JSON dictionary.
+    /// Creates a `UsercentricsOptions` object with the dashboard information provided in a JSON dictionary.
     private static func usercentricsOptions(from dictionary: [String: Any]?) -> UsercentricsOptions? {
         guard let dictionary else {
             return nil
