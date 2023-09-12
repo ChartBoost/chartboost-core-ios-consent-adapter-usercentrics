@@ -46,7 +46,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "0.2.8.0.0"
+    public let moduleVersion = "0.2.8.0.1"
 
     /// The delegate to be notified whenever any change happens in the CMP consent status.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
@@ -134,9 +134,10 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     }
 
     /// Sets up the module to make it ready to be used.
-    /// - completion: A completion handler to be executed when the module is done initializing.
+    /// - parameter configuration: A ``ModuleInitializationConfiguration`` for configuring the module.
+    /// - parameter completion: A completion handler to be executed when the module is done initializing.
     /// An error should be passed if the initialization failed, whereas `nil` should be passed if it succeeded.
-    public func initialize(completion: @escaping (Error?) -> Void) {
+    public func initialize(configuration: ModuleInitializationConfiguration, completion: @escaping (Error?) -> Void) {
         // Configure the SDK and fetch initial consent status.
         // We don't report consent changes to the delegate here since we are restoring the info from whatever the SDK has saved.
         initializeAndUpdateConsentInfo(reportingChanges: false, isFirstInitialization: true, completion: completion)
