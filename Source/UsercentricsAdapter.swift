@@ -11,6 +11,14 @@ import UsercentricsUI
 // All accesses to the Usercentrics SDK APIs must be wrapped by a call to `UsercentricsCore.isReady()`.
 // Usercentrics SDK will crash if its APIs are used but the SDK is not ready.
 
+/// A UsercentricsAdapter delegate that gets notified whenever the consent status per vendor changes.
+/// Intended to be implemented and set directly by the developer in their app.
+@objc public protocol UsercentricsAdapterConsentPerVendorDelegate {
+
+    /// Called whenever the ``UsercentricsAdapter/consentStatusPerVendor`` value changed.
+    func onConsentStatusPerVendorChange()
+}
+
 /// Chartboost Core Consent Usercentrics adapter.
 @objc(CBCUsercentricsAdapter)
 @objcMembers
@@ -38,6 +46,9 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
         /// The latest CCPA Opt-In string fetched value.
         var ccpaOptInString: ConsentValue?
+
+        /// The latest consent status per vendor fetched value.
+        var consentStatusPerVendor: [String: ConsentStatus]?
     }
 
     // MARK: - Properties
@@ -52,6 +63,11 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
     /// Adapters should not set it themselves.
     public weak var delegate: ConsentAdapterDelegate?
+
+    /// The delegate to be notified whenever any change happens to the `consentStatusPerVendor` property.
+    /// This is `nil` by default and can be set by users in their app to react to changes to this information.
+    /// It's not used by the Core SDK.
+    public weak var consentPerVendorDelegate: UsercentricsAdapterConsentPerVendorDelegate?
 
     /// The default value for `chartboostCoreDPSName` when none is provided.
     public static var defaultChartboostCoreDPSName = "ChartboostCore"
@@ -99,6 +115,12 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         consents[.usp] = cachedConsentInfo.uspString.map(ConsentValue.init(stringLiteral:))
         consents[.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
         return consents
+    }
+
+    /// The current consent status per vendor.
+    /// Keys correspond to a Usercentrics templateID.
+    public var consentStatusPerVendor: [String: ConsentStatus] {
+        cachedConsentInfo.consentStatusPerVendor ?? [:]
     }
 
     // MARK: - Instantiation and Initialization
@@ -410,6 +432,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     private func updateCachedConsentInfo(with status: UsercentricsReadyStatus, reportingChanges: Bool, comparingTo previousInfo: CachedConsentInfo) {
         log("Updating consent info", level: .debug)
         let gatedDelegate = reportingChanges ? delegate : nil
+        let gatedConsentPerVendorDelegate = reportingChanges ? consentPerVendorDelegate : nil
 
         // Should Collect Consent
         cachedConsentInfo.shouldCollectConsent = status.shouldCollectConsent
@@ -456,12 +479,22 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         if previousInfo.ccpaOptInString != newCCPAString {
             gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
         }
+
+        // Per-vendor consent
+        cachedConsentInfo.consentStatusPerVendor = Dictionary(grouping: status.consents, by: \.templateId)
+            .mapValues {    // $0 here is a [UsercentricsServiceConsent], but there should be only one element for each templateId
+                $0.first?.status == true ? .granted : .denied
+            }
+        if previousInfo.consentStatusPerVendor != cachedConsentInfo.consentStatusPerVendor {
+            gatedConsentPerVendorDelegate?.onConsentStatusPerVendorChange()
+        }
     }
 
     /// Clears the adapter internal cache and reports updates to the delegate.
     private func clearCachedConsentInfo(reportingChanges: Bool, comparingTo previousInfo: CachedConsentInfo) {
         log("Clearing consent info", level: .debug)
         let gatedDelegate = reportingChanges ? delegate : nil
+        let gatedConsentPerVendorDelegate = reportingChanges ? consentPerVendorDelegate : nil
 
         // Should Collect Consent
         cachedConsentInfo.shouldCollectConsent = nil
@@ -488,6 +521,12 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         cachedConsentInfo.ccpaOptInString = nil
         if previousInfo.ccpaOptInString != nil {
             gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: nil)
+        }
+
+        // Per-vendor consent
+        cachedConsentInfo.consentStatusPerVendor = nil
+        if previousInfo.consentStatusPerVendor != nil {
+            gatedConsentPerVendorDelegate?.onConsentStatusPerVendorChange()
         }
     }
 }
