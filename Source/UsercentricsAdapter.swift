@@ -14,7 +14,7 @@ import UsercentricsUI
 /// Chartboost Core Consent Usercentrics adapter.
 @objc(CBCUsercentricsAdapter)
 @objcMembers
-public final class UsercentricsAdapter: NSObject, ConsentAdapter {
+public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAdapter {
 
     /// ``UsercentricsAdapter`` initialization error.
     public enum InitializationError: String, Error {
