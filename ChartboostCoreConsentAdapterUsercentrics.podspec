@@ -19,8 +19,8 @@ Pod::Spec.new do |spec|
   # System frameworks used
   spec.ios.frameworks = ['Foundation', 'UIKit']
   
-  # This adapter is compatible with Chartboost Core 0.3+ versions of the SDK.
-  spec.dependency 'ChartboostCoreSDK', '~> 0.3'
+  # This adapter is compatible with Chartboost Core 0.4+ versions of the SDK.
+  spec.dependency 'ChartboostCoreSDK', '~> 0.4'
 
   # CMP SDK and version that this adapter is certified to work with.
   spec.dependency 'UsercentricsUI', '~> 2.8.0'
