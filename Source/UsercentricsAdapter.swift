@@ -49,7 +49,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "0.2.8.0.1"
+    public let moduleVersion = "0.2.8.0.2"
 
     /// The delegate to be notified whenever any change happens in the CMP consent status.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.

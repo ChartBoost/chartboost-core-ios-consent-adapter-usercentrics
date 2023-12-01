@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name        = 'ChartboostCoreConsentAdapterUsercentrics'
-  spec.version     = '0.2.8.0.1'
+  spec.version     = '0.2.8.0.2'
   spec.license     = { :type => 'MIT', :file => 'LICENSE.md' }
   spec.homepage    = 'https://github.com/ChartBoost/chartboost-core-ios-consent-adapter-usercentrics'
   spec.authors     = { 'Chartboost' => 'https://www.chartboost.com/' }
