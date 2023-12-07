@@ -14,7 +14,7 @@ import UsercentricsUI
 /// Chartboost Core Consent Usercentrics adapter.
 @objc(CBCUsercentricsAdapter)
 @objcMembers
-public final class UsercentricsAdapter: NSObject, ConsentAdapter {
+public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAdapter {
 
     /// ``UsercentricsAdapter`` initialization error.
     public enum InitializationError: String, Error {
@@ -38,6 +38,9 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
 
         /// The latest CCPA Opt-In string fetched value.
         var ccpaOptInString: ConsentValue?
+
+        /// The latest partner consent status fetched value.
+        var partnerConsentStatus: [String: ConsentStatus]?
     }
 
     // MARK: - Properties
@@ -46,7 +49,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "0.2.8.0.1"
+    public let moduleVersion = "0.2.8.0.2"
 
     /// The delegate to be notified whenever any change happens in the CMP consent status.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
@@ -67,6 +70,9 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// The Usercentrics options used to configure the Usercentrics SDK.
     private let options: UsercentricsOptions?
 
+    /// A dictionary that maps Usercentrics templateID's to Chartboost partner IDs.
+    private let partnerIDMap: [String: String]
+
     /// The Usercentrics banner used to display consent dialogs.
     /// It may be customized by the user by modifying the static property ``UsercentricsAdapter.bannerSettings``.
     private lazy var banner = UsercentricsBanner(bannerSettings: Self.bannerSettings)
@@ -82,6 +88,13 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// The current consent status determined by the CMP.
     public var consentStatus: ConsentStatus {
         cachedConsentInfo.consentStatus ?? .unknown
+    }
+
+    /// Individualized consent status per partner SDK.
+    ///
+    /// The keys for advertising SDKs should match Chartboost Mediation partner adapter ids.
+    public var partnerConsentStatus: [String: ConsentStatus] {
+        cachedConsentInfo.partnerConsentStatus ?? [:]
     }
 
     /// Detailed consent status for each consent standard, as determined by the CMP.
@@ -107,16 +120,22 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     public convenience init(options: UsercentricsOptions) {
-        self.init(options: options, chartboostCoreDPSName: UsercentricsAdapter.defaultChartboostCoreDPSName)
+        self.init(options: options, chartboostCoreDPSName: UsercentricsAdapter.defaultChartboostCoreDPSName, partnerIDMap: [:])
     }
 
     /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     /// - parameter chartboostCoreDPSName: The name for the Chartboost Core DPS that matches the one set on the Usercentrics dashboard.
-    public init(options: UsercentricsOptions, chartboostCoreDPSName: String = UsercentricsAdapter.defaultChartboostCoreDPSName) {
+    /// - parameter partnerIDMap: A dictionary that maps Usercentrics templateID's to Chartboost partner IDs.
+    public init(
+        options: UsercentricsOptions,
+        chartboostCoreDPSName: String = UsercentricsAdapter.defaultChartboostCoreDPSName,
+        partnerIDMap: [String: String] = [:]
+    ) {
         self.options = options
         self.chartboostCoreDPSName = chartboostCoreDPSName
+        self.partnerIDMap = partnerIDMap
     }
 
     /// The designated initializer for the module.
@@ -131,6 +150,7 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
     public init(credentials: [String : Any]?) {
         self.options = Self.usercentricsOptions(from: credentials?["options"] as? [String: Any])
         self.chartboostCoreDPSName = credentials?["coreDpsName"] as? String ?? Self.defaultChartboostCoreDPSName
+        self.partnerIDMap = credentials?["partnerIDMap"] as? [String: String] ?? [:]
     }
 
     /// Sets up the module to make it ready to be used.
@@ -457,6 +477,28 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         if previousInfo.ccpaOptInString != newCCPAString {
             gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
         }
+
+        // Partner Consent Status
+        cachedConsentInfo.partnerConsentStatus = [:]
+        for consent in status.consents {
+            let key = partnerIDMap[consent.templateId] ?? consent.templateId    // if no mapping we use Usercentrics templateId directly
+            cachedConsentInfo.partnerConsentStatus?[key] = consent.status ? .granted : .denied
+        }
+        if previousInfo.partnerConsentStatus != cachedConsentInfo.partnerConsentStatus {
+            // Report changes to existing or new entries
+            for (partnerID, status) in cachedConsentInfo.partnerConsentStatus ?? [:] {
+                if previousInfo.partnerConsentStatus?[partnerID] != status {
+                    gatedDelegate?.onPartnerConsentStatusChange(partnerID: partnerID, status: status)
+                }
+            }
+            // Report changes for deleted entries
+            for (partnerID, status) in previousInfo.partnerConsentStatus ?? [:]
+                where cachedConsentInfo.partnerConsentStatus?[partnerID] == nil
+                && status != .unknown
+            {
+                gatedDelegate?.onPartnerConsentStatusChange(partnerID: partnerID, status: .unknown)
+            }
+        }
     }
 
     /// Clears the adapter internal cache and reports updates to the delegate.
@@ -489,6 +531,14 @@ public final class UsercentricsAdapter: NSObject, ConsentAdapter {
         cachedConsentInfo.ccpaOptInString = nil
         if previousInfo.ccpaOptInString != nil {
             gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: nil)
+        }
+
+        // Per-vendor consent
+        cachedConsentInfo.partnerConsentStatus = nil
+        if let previousPartnerConsentStatus = previousInfo.partnerConsentStatus {
+            for partnerID in previousPartnerConsentStatus.keys {
+                gatedDelegate?.onPartnerConsentStatusChange(partnerID: partnerID, status: .unknown)
+            }
         }
     }
 }
