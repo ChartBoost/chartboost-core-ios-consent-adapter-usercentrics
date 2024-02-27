@@ -27,9 +27,6 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         /// The latest `shouldCollectConsent` fetched value.
         var shouldCollectConsent: Bool?
 
-        /// The latest `consentStatus` fetched value.
-        var consentStatus: ConsentStatus?
-
         /// The latest TCF string fetched value.
         var tcfString: String?
 
@@ -40,7 +37,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         var ccpaOptInString: ConsentValue?
 
         /// The latest partner consent status fetched value.
-        var partnerConsentStatus: [String: ConsentStatus]?
+        var partnerConsentStatus: [ConsentKey: ConsentValue]?
     }
 
     // MARK: - Properties
@@ -85,32 +82,23 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         cachedConsentInfo.shouldCollectConsent ?? true
     }
 
-    /// The current consent status determined by the CMP.
-    public var consentStatus: ConsentStatus {
-        cachedConsentInfo.consentStatus ?? .unknown
-    }
-
-    /// Individualized consent status per partner SDK.
+    /// Current user consent info as determined by the CMP.
     ///
-    /// The keys for advertising SDKs should match Chartboost Mediation partner adapter ids.
-    public var partnerConsentStatus: [String: ConsentStatus] {
-        cachedConsentInfo.partnerConsentStatus ?? [:]
-    }
-
-    /// Detailed consent status for each consent standard, as determined by the CMP.
+    /// Consent info may include IAB strings, like TCF or GPP, and parsed boolean-like signals like "CCPA Opt In Sale"
+    /// and partner-specific signals.
     ///
-    /// Predefined consent standard constants, such as ``ConsentStandard/usp`` and ``ConsentStandard/tcf``, are provided
+    /// Predefined consent key constants, such as ``ConsentKeys/tcf`` and ``ConsentKeys/usp``, are provided
     /// by Core. Adapters should use them when reporting the status of a common standard.
     /// Custom standards should only be used by adapters when a corresponding constant is not provided by the Core.
     ///
-    /// While Core also provides consent value constants, these are only applicable for the ``ConsentStandard/ccpa`` and
-    /// ``ConsentStandard/gdpr`` standards. For other standards a custom value should be provided (e.g. a IAB TCF string
-    /// for ``ConsentStandard/tcf``).
-    public var consents: [ConsentStandard : ConsentValue] {
-        var consents: [ConsentStandard: ConsentValue] = [:]
-        consents[.tcf] = cachedConsentInfo.tcfString.map(ConsentValue.init(stringLiteral:))
-        consents[.usp] = cachedConsentInfo.uspString.map(ConsentValue.init(stringLiteral:))
-        consents[.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
+    /// Predefined consent value constants are also proivded, but are only applicable to non-IAB string keys, like
+    /// ``ConsentKeys/ccpaOptIn`` and ``ConsentKeys/gdprConsentGiven``.
+    public var consents: [ConsentKey : ConsentValue] {
+        // Include per-partner consent, IAB strings, and CCPA Opt In signal
+        var consents: [ConsentKey: ConsentValue] = cachedConsentInfo.partnerConsentStatus ?? [:]
+        consents[ConsentKeys.tcf] = cachedConsentInfo.tcfString
+        consents[ConsentKeys.usp] = cachedConsentInfo.uspString
+        consents[ConsentKeys.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
         return consents
     }
 
@@ -171,9 +159,9 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// be used instead.
     /// If the CMP does not support custom consent dialogs or the operation fails for any other reason, the completion
     /// handler is executed with a `false` parameter.
-    /// - parameter source: The source of the new consent. See the ``ConsentStatusSource`` documentation for more info.
+    /// - parameter source: The source of the new consent. See the ``ConsentSource`` documentation for more info.
     /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
-    public func grantConsent(source: ConsentStatusSource, completion: @escaping (_ succeeded: Bool) -> Void) {
+    public func grantConsent(source: ConsentSource, completion: @escaping (_ succeeded: Bool) -> Void) {
         log("Granting consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
@@ -199,9 +187,9 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// be used instead.
     /// If the CMP does not support custom consent dialogs or the operation fails for any other reason, the completion
     /// handler is executed with a `false` parameter.
-    /// - parameter source: The source of the new consent. See the ``ConsentStatusSource`` documentation for more info.
+    /// - parameter source: The source of the new consent. See the ``ConsentSource`` documentation for more info.
     /// - parameter completion: Handler called to indicate if the operation went through successfully or not.
-    public func denyConsent(source: ConsentStatusSource, completion: @escaping (_ succeeded: Bool) -> Void) {
+    public func denyConsent(source: ConsentSource, completion: @escaping (_ succeeded: Bool) -> Void) {
         log("Denying consent", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsCore.shared` is accessed and the SDK is not ready).
@@ -398,9 +386,9 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         )
     }
 
-    /// Maps a `ConsentStatusSource` value to a corresponding `UsercentricsConsentType` value.
-    private func usercentricsConsentType(from coreConsentStatusSource: ConsentStatusSource) -> UsercentricsConsentType {
-        switch coreConsentStatusSource {
+    /// Maps a `ConsentSource` value to a corresponding `UsercentricsConsentType` value.
+    private func usercentricsConsentType(from coreConsentSource: ConsentSource) -> UsercentricsConsentType {
+        switch coreConsentSource {
         case .user:
             return .explicit_
         case .developer:
@@ -435,26 +423,13 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         // Should Collect Consent
         cachedConsentInfo.shouldCollectConsent = status.shouldCollectConsent
 
-        // Consent Status
-        let newConsentStatus: ConsentStatus?
-        if let coreDPS = status.consents.first(where: { $0.dataProcessor == chartboostCoreDPSName }) {
-            newConsentStatus = coreDPS.status ? .granted : .denied
-        } else {
-            log("ChartboostCore DPS not found in payload, expected one named '\(chartboostCoreDPSName)'", level: .error)
-            newConsentStatus = nil
-        }
-        cachedConsentInfo.consentStatus = newConsentStatus
-        if previousInfo.consentStatus != newConsentStatus {
-            gatedDelegate?.onConsentStatusChange(consentStatus)
-        }
-
         // TCF string
         UsercentricsCore.shared.getTCFData { [weak self] tcfData in
             guard let self else { return }
             let newTCFString = tcfData.tcString.isEmpty ? nil : tcfData.tcString
             self.cachedConsentInfo.tcfString = newTCFString
             if previousInfo.tcfString != newTCFString {
-                gatedDelegate?.onConsentChange(standard: .tcf, value: newTCFString.map(ConsentValue.init(stringLiteral:)))
+                gatedDelegate?.onConsentChange(key: ConsentKeys.tcf, value: newTCFString)
             }
         }
 
@@ -463,40 +438,39 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         let newUSPString = uspData.uspString.isEmpty ? nil : uspData.uspString
         cachedConsentInfo.uspString = newUSPString
         if previousInfo.uspString != newUSPString {
-            gatedDelegate?.onConsentChange(standard: .usp, value: newUSPString.map(ConsentValue.init(stringLiteral:)))
+            gatedDelegate?.onConsentChange(key: ConsentKeys.usp, value: newUSPString)
         }
 
         // CCPA Opt-In String
         let newCCPAString: ConsentValue?
         if let ccpaOptedOut = uspData.optedOut {
-            newCCPAString = ccpaOptedOut.boolValue ? .denied : .granted
+            newCCPAString = ccpaOptedOut.boolValue ? ConsentValues.denied : ConsentValues.granted
         } else {
             newCCPAString = nil
         }
         cachedConsentInfo.ccpaOptInString = newCCPAString
         if previousInfo.ccpaOptInString != newCCPAString {
-            gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: newCCPAString)
+            gatedDelegate?.onConsentChange(key: ConsentKeys.ccpaOptIn, value: newCCPAString)
         }
 
         // Partner Consent Status
         cachedConsentInfo.partnerConsentStatus = [:]
         for consent in status.consents {
             let key = partnerIDMap[consent.templateId] ?? consent.templateId    // if no mapping we use Usercentrics templateId directly
-            cachedConsentInfo.partnerConsentStatus?[key] = consent.status ? .granted : .denied
+            cachedConsentInfo.partnerConsentStatus?[key] = consent.status ? ConsentValues.granted : ConsentValues.denied
         }
         if previousInfo.partnerConsentStatus != cachedConsentInfo.partnerConsentStatus {
             // Report changes to existing or new entries
             for (partnerID, status) in cachedConsentInfo.partnerConsentStatus ?? [:] {
                 if previousInfo.partnerConsentStatus?[partnerID] != status {
-                    gatedDelegate?.onPartnerConsentStatusChange(partnerID: partnerID, status: status)
+                    gatedDelegate?.onConsentChange(key: partnerID, value: status)
                 }
             }
             // Report changes for deleted entries
             for (partnerID, status) in previousInfo.partnerConsentStatus ?? [:]
                 where cachedConsentInfo.partnerConsentStatus?[partnerID] == nil
-                && status != .unknown
             {
-                gatedDelegate?.onPartnerConsentStatusChange(partnerID: partnerID, status: .unknown)
+                gatedDelegate?.onConsentChange(key: partnerID, value: nil)
             }
         }
     }
@@ -509,35 +483,29 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         // Should Collect Consent
         cachedConsentInfo.shouldCollectConsent = nil
 
-        // Consent Status
-        cachedConsentInfo.consentStatus = nil
-        if previousInfo.consentStatus != nil {
-            gatedDelegate?.onConsentStatusChange(consentStatus)
-        }
-
         // TCF string
         cachedConsentInfo.tcfString = nil
         if previousInfo.tcfString != nil {
-            gatedDelegate?.onConsentChange(standard: .tcf, value: nil)
+            gatedDelegate?.onConsentChange(key: ConsentKeys.tcf, value: nil)
         }
 
         // USP String
         cachedConsentInfo.uspString = nil
         if previousInfo.uspString != nil {
-            gatedDelegate?.onConsentChange(standard: .usp, value: nil)
+            gatedDelegate?.onConsentChange(key: ConsentKeys.usp, value: nil)
         }
 
         // CCPA Opt-In String
         cachedConsentInfo.ccpaOptInString = nil
         if previousInfo.ccpaOptInString != nil {
-            gatedDelegate?.onConsentChange(standard: .ccpaOptIn, value: nil)
+            gatedDelegate?.onConsentChange(key: ConsentKeys.ccpaOptIn, value: nil)
         }
 
         // Per-vendor consent
         cachedConsentInfo.partnerConsentStatus = nil
         if let previousPartnerConsentStatus = previousInfo.partnerConsentStatus {
             for partnerID in previousPartnerConsentStatus.keys {
-                gatedDelegate?.onPartnerConsentStatusChange(partnerID: partnerID, status: .unknown)
+                gatedDelegate?.onConsentChange(key: partnerID, value: nil)
             }
         }
     }
