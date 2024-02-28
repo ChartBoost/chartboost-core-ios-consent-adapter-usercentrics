@@ -48,7 +48,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// The version of the module.
     public let moduleVersion = "1.2.8.0.2"
 
-    /// The delegate to be notified whenever any change happens in the CMP consent status.
+    /// The delegate to be notified whenever any change happens in the CMP consent info.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
     /// Adapters should not set it themselves.
     public weak var delegate: ConsentAdapterDelegate?
@@ -89,7 +89,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     ///
     /// Predefined consent key constants, such as ``ConsentKeys/tcf`` and ``ConsentKeys/usp``, are provided
     /// by Core. Adapters should use them when reporting the status of a common standard.
-    /// Custom standards should only be used by adapters when a corresponding constant is not provided by the Core.
+    /// Custom keys should only be used by adapters when a corresponding constant is not provided by the Core.
     ///
     /// Predefined consent value constants are also proivded, but are only applicable to non-IAB string keys, like
     /// ``ConsentKeys/ccpaOptIn`` and ``ConsentKeys/gdprConsentGiven``.
@@ -146,7 +146,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// - parameter completion: A completion handler to be executed when the module is done initializing.
     /// An error should be passed if the initialization failed, whereas `nil` should be passed if it succeeded.
     public func initialize(configuration: ModuleInitializationConfiguration, completion: @escaping (Error?) -> Void) {
-        // Configure the SDK and fetch initial consent status.
+        // Configure the SDK and fetch initial consent info.
         // We don't report consent changes to the delegate here since we are restoring the info from whatever the SDK has saved.
         initializeAndUpdateConsentInfo(reportingChanges: false, isFirstInitialization: true, completion: completion)
     }
