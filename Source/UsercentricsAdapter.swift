@@ -36,8 +36,8 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         /// The latest CCPA Opt-In string fetched value.
         var ccpaOptInString: ConsentValue?
 
-        /// The latest partner consent status fetched value.
-        var partnerConsentStatus: [ConsentKey: ConsentValue]?
+        /// The latest partner consents fetched value.
+        var partnerConsents: [ConsentKey: ConsentValue]?
     }
 
     // MARK: - Properties
@@ -95,7 +95,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// ``ConsentKeys/ccpaOptIn`` and ``ConsentKeys/gdprConsentGiven``.
     public var consents: [ConsentKey : ConsentValue] {
         // Include per-partner consent, IAB strings, and CCPA Opt In signal
-        var consents: [ConsentKey: ConsentValue] = cachedConsentInfo.partnerConsentStatus ?? [:]
+        var consents: [ConsentKey: ConsentValue] = cachedConsentInfo.partnerConsents ?? [:]
         consents[ConsentKeys.tcf] = cachedConsentInfo.tcfString
         consents[ConsentKeys.usp] = cachedConsentInfo.uspString
         consents[ConsentKeys.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
@@ -453,22 +453,22 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
             gatedDelegate?.onConsentChange(key: ConsentKeys.ccpaOptIn, value: newCCPAString)
         }
 
-        // Partner Consent Status
-        cachedConsentInfo.partnerConsentStatus = [:]
+        // Partner Consents
+        cachedConsentInfo.partnerConsents = [:]
         for consent in status.consents {
             let key = partnerIDMap[consent.templateId] ?? consent.templateId    // if no mapping we use Usercentrics templateId directly
-            cachedConsentInfo.partnerConsentStatus?[key] = consent.status ? ConsentValues.granted : ConsentValues.denied
+            cachedConsentInfo.partnerConsents?[key] = consent.status ? ConsentValues.granted : ConsentValues.denied
         }
-        if previousInfo.partnerConsentStatus != cachedConsentInfo.partnerConsentStatus {
+        if previousInfo.partnerConsents != cachedConsentInfo.partnerConsents {
             // Report changes to existing or new entries
-            for (partnerID, status) in cachedConsentInfo.partnerConsentStatus ?? [:] {
-                if previousInfo.partnerConsentStatus?[partnerID] != status {
+            for (partnerID, status) in cachedConsentInfo.partnerConsents ?? [:] {
+                if previousInfo.partnerConsents?[partnerID] != status {
                     gatedDelegate?.onConsentChange(key: partnerID, value: status)
                 }
             }
             // Report changes for deleted entries
-            for (partnerID, status) in previousInfo.partnerConsentStatus ?? [:]
-                where cachedConsentInfo.partnerConsentStatus?[partnerID] == nil
+            for (partnerID, _) in previousInfo.partnerConsents ?? [:]
+                where cachedConsentInfo.partnerConsents?[partnerID] == nil
             {
                 gatedDelegate?.onConsentChange(key: partnerID, value: nil)
             }
@@ -502,8 +502,8 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         }
 
         // Per-vendor consent
-        cachedConsentInfo.partnerConsentStatus = nil
-        if let previousPartnerConsentStatus = previousInfo.partnerConsentStatus {
+        cachedConsentInfo.partnerConsents = nil
+        if let previousPartnerConsentStatus = previousInfo.partnerConsents {
             for partnerID in previousPartnerConsentStatus.keys {
                 gatedDelegate?.onConsentChange(key: partnerID, value: nil)
             }
