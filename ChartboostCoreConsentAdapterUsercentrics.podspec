@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name        = 'ChartboostCoreConsentAdapterUsercentrics'
-  spec.version     = '0.2.8.0.2'
+  spec.version     = '1.2.8.0.2'
   spec.license     = { :type => 'MIT', :file => 'LICENSE.md' }
   spec.homepage    = 'https://github.com/ChartBoost/chartboost-core-ios-consent-adapter-usercentrics'
   spec.authors     = { 'Chartboost' => 'https://www.chartboost.com/' }
@@ -19,8 +19,8 @@ Pod::Spec.new do |spec|
   # System frameworks used
   spec.ios.frameworks = ['Foundation', 'UIKit']
   
-  # This adapter is compatible with Chartboost Core 0.4+ versions of the SDK.
-  spec.dependency 'ChartboostCoreSDK', '~> 0.4'
+  # This adapter is compatible with Chartboost Core 1.0+ versions of the SDK.
+  spec.dependency 'ChartboostCoreSDK', '~> 1.0'
 
   # CMP SDK and version that this adapter is certified to work with.
   spec.dependency 'UsercentricsUI', '~> 2.8.0'
