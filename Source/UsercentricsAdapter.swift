@@ -27,12 +27,6 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         /// The latest `shouldCollectConsent` fetched value.
         var shouldCollectConsent: Bool?
 
-        /// The latest TCF string fetched value.
-        var tcfString: String?
-
-        /// The latest USP string fetched value.
-        var uspString: String?
-
         /// The latest CCPA Opt-In string fetched value.
         var ccpaOptInString: ConsentValue?
 
@@ -71,6 +65,9 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// The latest consent info fetched from the Usercentrics SDK.
     private var cachedConsentInfo = CachedConsentInfo()
 
+    /// The observer for changes on UserDefault's consent-related keys.
+    private var userDefaultsObserver: NSObject?
+
     /// Indicates whether the CMP has determined that consent should be collected from the user.
     public var shouldCollectConsent: Bool {
         cachedConsentInfo.shouldCollectConsent ?? true
@@ -89,9 +86,10 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// ``ConsentKeys/ccpaOptIn`` and ``ConsentKeys/gdprConsentGiven``.
     public var consents: [ConsentKey: ConsentValue] {
         // Include per-partner consent, IAB strings, and CCPA Opt In signal
-        var consents: [ConsentKey: ConsentValue] = cachedConsentInfo.partnerConsents ?? [:]
-        consents[ConsentKeys.tcf] = cachedConsentInfo.tcfString
-        consents[ConsentKeys.usp] = cachedConsentInfo.uspString
+        var consents = userDefaultsIABStrings()
+        if let partnerConsents = cachedConsentInfo.partnerConsents {
+            consents.merge(partnerConsents, uniquingKeysWith: { first, second in first })
+        }
         consents[ConsentKeys.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
         return consents
     }
@@ -285,6 +283,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
 
             // Start observing consent changes and reporting updates to the delegate object
             self?.startObservingConsentChanges()
+            self?.userDefaultsObserver = self?.startObservingUserDefaultsIABStrings()
 
             // Wait for initialization status to update
             UsercentricsCore.isReady(onSuccess: { status in
@@ -413,25 +412,8 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         // Should Collect Consent
         cachedConsentInfo.shouldCollectConsent = status.shouldCollectConsent
 
-        // TCF string
-        UsercentricsCore.shared.getTCFData { [weak self] tcfData in
-            guard let self else { return }
-            let newTCFString = tcfData.tcString.isEmpty ? nil : tcfData.tcString
-            self.cachedConsentInfo.tcfString = newTCFString
-            if previousInfo.tcfString != newTCFString {
-                gatedDelegate?.onConsentChange(key: ConsentKeys.tcf, value: newTCFString)
-            }
-        }
-
-        // USP String
-        let uspData = UsercentricsCore.shared.getUSPData()
-        let newUSPString = uspData.uspString.isEmpty ? nil : uspData.uspString
-        cachedConsentInfo.uspString = newUSPString
-        if previousInfo.uspString != newUSPString {
-            gatedDelegate?.onConsentChange(key: ConsentKeys.usp, value: newUSPString)
-        }
-
         // CCPA Opt-In String
+        let uspData = UsercentricsCore.shared.getUSPData()
         let newCCPAString: ConsentValue?
         if let ccpaOptedOut = uspData.optedOut {
             newCCPAString = ccpaOptedOut.boolValue ? ConsentValues.denied : ConsentValues.granted
@@ -471,18 +453,6 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
 
         // Should Collect Consent
         cachedConsentInfo.shouldCollectConsent = nil
-
-        // TCF string
-        cachedConsentInfo.tcfString = nil
-        if previousInfo.tcfString != nil {
-            gatedDelegate?.onConsentChange(key: ConsentKeys.tcf, value: nil)
-        }
-
-        // USP String
-        cachedConsentInfo.uspString = nil
-        if previousInfo.uspString != nil {
-            gatedDelegate?.onConsentChange(key: ConsentKeys.usp, value: nil)
-        }
 
         // CCPA Opt-In String
         cachedConsentInfo.ccpaOptInString = nil
