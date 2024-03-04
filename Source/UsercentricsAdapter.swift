@@ -53,16 +53,10 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// Adapters should not set it themselves.
     public weak var delegate: ConsentAdapterDelegate?
 
-    /// The default value for `chartboostCoreDPSName` when none is provided.
-    public static var defaultChartboostCoreDPSName = "ChartboostCore"
-
     /// The settings provided when creating the Usercentrics banner.
     /// This property may be modified before the first call to ``showConsentDialog(_:from:completion:)`` to customize the banner created by the adapter.
     /// Changes afterwards have no effect.
     public static var bannerSettings: BannerSettings?
-
-    /// The name of the Usercentrics Data Processing Service (DPS) defined in the Usercentrics dashboard for the Chartboost Core SDK.
-    private let chartboostCoreDPSName: String
 
     /// The Usercentrics options used to configure the Usercentrics SDK.
     private let options: UsercentricsOptions?
@@ -108,21 +102,18 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     public convenience init(options: UsercentricsOptions) {
-        self.init(options: options, chartboostCoreDPSName: UsercentricsAdapter.defaultChartboostCoreDPSName, partnerIDMap: [:])
+        self.init(options: options, partnerIDMap: [:])
     }
 
     /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
-    /// - parameter chartboostCoreDPSName: The name for the Chartboost Core DPS that matches the one set on the Usercentrics dashboard.
     /// - parameter partnerIDMap: A dictionary that maps Usercentrics templateID's to Chartboost partner IDs.
     public init(
         options: UsercentricsOptions,
-        chartboostCoreDPSName: String = UsercentricsAdapter.defaultChartboostCoreDPSName,
         partnerIDMap: [String: String] = [:]
     ) {
         self.options = options
-        self.chartboostCoreDPSName = chartboostCoreDPSName
         self.partnerIDMap = partnerIDMap
     }
 
@@ -137,7 +128,6 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// Chartboost Core SDK keeps strong references to modules that are successfully initialized.
     public init(credentials: [String: Any]?) {
         self.options = Self.usercentricsOptions(from: credentials?["options"] as? [String: Any])
-        self.chartboostCoreDPSName = credentials?["coreDpsName"] as? String ?? Self.defaultChartboostCoreDPSName
         self.partnerIDMap = credentials?["partnerIDMap"] as? [String: String] ?? [:]
     }
 
