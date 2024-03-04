@@ -1,4 +1,4 @@
-// Copyright 2023-2023 Chartboost, Inc.
+// Copyright 2023-2024 Chartboost, Inc.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -93,7 +93,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     ///
     /// Predefined consent value constants are also proivded, but are only applicable to non-IAB string keys, like
     /// ``ConsentKeys/ccpaOptIn`` and ``ConsentKeys/gdprConsentGiven``.
-    public var consents: [ConsentKey : ConsentValue] {
+    public var consents: [ConsentKey: ConsentValue] {
         // Include per-partner consent, IAB strings, and CCPA Opt In signal
         var consents: [ConsentKey: ConsentValue] = cachedConsentInfo.partnerConsents ?? [:]
         consents[ConsentKeys.tcf] = cachedConsentInfo.tcfString
@@ -135,7 +135,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// - note: Modules should not perform costly operations on this initializer.
     /// Chartboost Core SDK may instantiate and discard several instances of the same module.
     /// Chartboost Core SDK keeps strong references to modules that are successfully initialized.
-    public init(credentials: [String : Any]?) {
+    public init(credentials: [String: Any]?) {
         self.options = Self.usercentricsOptions(from: credentials?["options"] as? [String: Any])
         self.chartboostCoreDPSName = credentials?["coreDpsName"] as? String ?? Self.defaultChartboostCoreDPSName
         self.partnerIDMap = credentials?["partnerIDMap"] as? [String: String] ?? [:]
@@ -468,8 +468,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
             }
             // Report changes for deleted entries
             for (partnerID, _) in previousInfo.partnerConsents ?? [:]
-                where cachedConsentInfo.partnerConsents?[partnerID] == nil
-            {
+                where cachedConsentInfo.partnerConsents?[partnerID] == nil {
                 gatedDelegate?.onConsentChange(key: partnerID, value: nil)
             }
         }
