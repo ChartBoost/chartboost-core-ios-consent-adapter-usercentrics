@@ -15,7 +15,6 @@ import UsercentricsUI
 @objc(CBCUsercentricsAdapter)
 @objcMembers
 public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAdapter {
-
     /// ``UsercentricsAdapter`` initialization error.
     public enum InitializationError: String, Error {
         /// Initialization failed because no `UsercentricsOptions` object was available.
@@ -48,7 +47,8 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     public weak var delegate: ConsentAdapterDelegate?
 
     /// The settings provided when creating the Usercentrics banner.
-    /// This property may be modified before the first call to ``showConsentDialog(_:from:completion:)`` to customize the banner created by the adapter.
+    /// This property may be modified before the first call to ``showConsentDialog(_:from:completion:)``
+    /// to customize the banner created by the adapter.
     /// Changes afterwards have no effect.
     public static var bannerSettings: BannerSettings?
 
@@ -88,7 +88,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
         // Include per-partner consent, IAB strings, and CCPA Opt In signal
         var consents = userDefaultsIABStrings()
         if let partnerConsents = cachedConsentInfo.partnerConsents {
-            consents.merge(partnerConsents, uniquingKeysWith: { first, second in first })
+            consents.merge(partnerConsents, uniquingKeysWith: { first, _ in first })
         }
         consents[ConsentKeys.ccpaOptIn] = cachedConsentInfo.ccpaOptInString
         return consents
@@ -96,14 +96,16 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
 
     // MARK: - Instantiation and Initialization
 
-    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
+    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to
+    /// ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     public convenience init(options: UsercentricsOptions) {
         self.init(options: options, partnerIDMap: [:])
     }
 
-    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
+    /// Instantiates a ``UsercentricsAdapter`` module which can be passed on a call to 
+    /// ``ChartboostCore/initializeSDK(with:moduleObserver:)``.
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     /// - parameter partnerIDMap: A dictionary that maps Usercentrics templateID's to Chartboost partner IDs.
@@ -216,7 +218,11 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
 
         // Usercentrics needs to be configured again after a call to `reset()`, thus we pass `isFirstInitialization` to true.
         // We pass the original consent info before it got cleared so it's used to compare against and trigger proper delegate calls
-        initializeAndUpdateConsentInfo(reportingChanges: true, isFirstInitialization: true, comparingTo: previousConsentInfo) { [weak self] _ in
+        initializeAndUpdateConsentInfo(
+            reportingChanges: true,
+            isFirstInitialization: true,
+            comparingTo: previousConsentInfo
+        ) { [weak self] _ in
             // Finish with success, since even if we failed to fetch the new info the SDK was reset.
             self?.log("Reset consent", level: .info)
             completion(true)
@@ -229,7 +235,11 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     /// - parameter viewController: The view controller to present the consent dialog from.
     /// - parameter completion: This handler is called to indicate whether the consent dialog was successfully presented or not.
     /// Note that this is called at the moment the dialog is presented, **not when it is dismissed**.
-    public func showConsentDialog(_ type: ConsentDialogType, from viewController: UIViewController, completion: @escaping (_ succeeded: Bool) -> Void) {
+    public func showConsentDialog(
+        _ type: ConsentDialogType,
+        from viewController: UIViewController,
+        completion: @escaping (_ succeeded: Bool) -> Void
+    ) {
         log("Showing \(type) consent dialog", level: .debug)
 
         // Initialize Usercentrics if needed (an exception is raised if `UsercentricsBanner` is used and the SDK is not ready).
@@ -368,7 +378,7 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
             settingsId: dictionary["settingsId"] as? String ?? "",
             defaultLanguage: dictionary["defaultLanguage"] as? String ?? "en",
             version: dictionary["version"] as? String ?? "latest",
-            timeoutMillis: dictionary["timeoutMillis"] as? Int64 ?? 5_000,
+            timeoutMillis: dictionary["timeoutMillis"] as? Int64 ?? 5000,
             loggerLevel: loggerLevel,
             ruleSetId: dictionary["ruleSetId"] as? String ?? "",
             consentMediation: dictionary["consentMediation"] as? Bool ?? false
@@ -405,7 +415,11 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
     }
 
     /// Updates the cached consent info and reports updates to the indicated delegate.
-    private func updateCachedConsentInfo(with status: UsercentricsReadyStatus, reportingChanges: Bool, comparingTo previousInfo: CachedConsentInfo) {
+    private func updateCachedConsentInfo(
+        with status: UsercentricsReadyStatus,
+        reportingChanges: Bool,
+        comparingTo previousInfo: CachedConsentInfo
+    ) {
         log("Updating consent info", level: .debug)
         let gatedDelegate = reportingChanges ? delegate : nil
 
@@ -462,9 +476,9 @@ public final class UsercentricsAdapter: NSObject, InitializableModule, ConsentAd
 
         // Per-vendor consent
         cachedConsentInfo.partnerConsents = nil
-        if let previousPartnerConsentStatus = previousInfo.partnerConsents {
+        if let gatedDelegate, let previousPartnerConsentStatus = previousInfo.partnerConsents {
             for partnerID in previousPartnerConsentStatus.keys {
-                gatedDelegate?.onConsentChange(key: partnerID, value: nil)
+                gatedDelegate.onConsentChange(key: partnerID, value: nil)
             }
         }
     }
