@@ -66,7 +66,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     private var cachedConsentInfo = CachedConsentInfo()
 
     /// The observer for changes on UserDefault's consent-related keys.
-    private var userDefaultsObserver: NSObject?
+    private var userDefaultsObserver: Any?
 
     /// Indicates whether the CMP has determined that consent should be collected from the user.
     public var shouldCollectConsent: Bool {
