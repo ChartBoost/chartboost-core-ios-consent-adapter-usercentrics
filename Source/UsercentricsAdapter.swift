@@ -436,7 +436,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
         }
         cachedConsentInfo.ccpaOptInString = newCCPAString
         if previousInfo.ccpaOptInString != newCCPAString {
-            gatedDelegate?.onConsentChange(key: ConsentKeys.ccpaOptIn, value: newCCPAString)
+            gatedDelegate?.onConsentChange(key: ConsentKeys.ccpaOptIn)
         }
 
         // Partner Consents
@@ -449,13 +449,13 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
             // Report changes to existing or new entries
             for (partnerID, status) in cachedConsentInfo.partnerConsents ?? [:] {
                 if previousInfo.partnerConsents?[partnerID] != status {
-                    gatedDelegate?.onConsentChange(key: partnerID, value: status)
+                    gatedDelegate?.onConsentChange(key: partnerID)
                 }
             }
             // Report changes for deleted entries
             for (partnerID, _) in previousInfo.partnerConsents ?? [:]
                 where cachedConsentInfo.partnerConsents?[partnerID] == nil {
-                gatedDelegate?.onConsentChange(key: partnerID, value: nil)
+                gatedDelegate?.onConsentChange(key: partnerID)
             }
         }
     }
@@ -471,14 +471,14 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
         // CCPA Opt-In String
         cachedConsentInfo.ccpaOptInString = nil
         if previousInfo.ccpaOptInString != nil {
-            gatedDelegate?.onConsentChange(key: ConsentKeys.ccpaOptIn, value: nil)
+            gatedDelegate?.onConsentChange(key: ConsentKeys.ccpaOptIn)
         }
 
         // Per-vendor consent
         cachedConsentInfo.partnerConsents = nil
         if let gatedDelegate, let previousPartnerConsentStatus = previousInfo.partnerConsents {
             for partnerID in previousPartnerConsentStatus.keys {
-                gatedDelegate.onConsentChange(key: partnerID, value: nil)
+                gatedDelegate.onConsentChange(key: partnerID)
             }
         }
     }
