@@ -58,6 +58,30 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     /// A dictionary that maps Usercentrics templateID's to Chartboost partner IDs.
     private let partnerIDMap: [String: String]
 
+    /// The default value for ``partnerIDMap``.
+    /// This is harcoded in the adapter because of lack of backend support at the moment.
+    private static let defaultPartnerIDMap = [
+        "J64M6DKwx": "adcolony",
+        "r7rvuoyDz": "admob",
+        "IUyljv4X5": "amazon_aps",
+        "fHczTMzX8": "applovin",
+        "IEbRp3saT": "chartboost",
+        "H17alcVo_iZ7": "fyber",
+        "S1_9Vsuj-Q": "google_googlebidding",
+        "ROCBK21nx": "hyprmx",
+        "ykdq8j5a9MExGT": "inmobi",
+        "9dchbL797": "ironsource",
+        "ax0Nljnj2szF_r": "facebook",
+        "E6AgqirYV": "mintegral",
+        "n/a": "mobilefuse",
+        "HWSNU_LI1": "pangle",
+        "B1DLe54jui-X": "tapjoy",
+        "hpb62D82I": "unity",
+        "5bv4OvSwoXKh-G": "verve",
+        "jk3jF2tpw": "vungle",
+        "EMD3qUMa8": "vungle"
+    ]
+
     /// The Usercentrics banner used to display consent dialogs.
     /// It may be customized by the user by modifying the static property ``UsercentricsAdapter.bannerSettings``.
     private lazy var banner = UsercentricsBanner(bannerSettings: Self.bannerSettings)
@@ -109,12 +133,14 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     /// - parameter options: The options to initialize Usercentrics with. Refer to the Usercentrics documentation:
     /// https://docs.usercentrics.com/cmp_in_app_sdk/latest/getting_started/configure/
     /// - parameter partnerIDMap: A dictionary that maps Usercentrics templateID's to Chartboost partner IDs.
+    /// A default mapping is provided by default. Information provided in this parameter is additive and overrides
+    /// the default entries only in case of key collision.
     public init(
         options: UsercentricsOptions,
         partnerIDMap: [String: String] = [:]
     ) {
         self.options = options
-        self.partnerIDMap = partnerIDMap
+        self.partnerIDMap = Self.defaultPartnerIDMap.merging(partnerIDMap, uniquingKeysWith: { first, second in second })
     }
 
     /// The designated initializer for the module.
