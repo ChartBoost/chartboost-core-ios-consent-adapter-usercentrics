@@ -278,13 +278,13 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
             switch type {
             case .concise:
                 self.banner.showFirstLayer(hostView: viewController) { [weak self] userResponse in
-                    self?.log("1st layer response: \(userResponse)", level: .trace)
+                    self?.log("1st layer response: \(userResponse)", level: .verbose)
                 }
                 self.log("Showed \(type) consent dialog", level: .info)
                 completion(true)
             case .detailed:
                 self.banner.showSecondLayer(hostView: viewController) { [weak self] userResponse in
-                    self?.log("2nd layer response: \(userResponse)", level: .trace)
+                    self?.log("2nd layer response: \(userResponse)", level: .verbose)
                 }
                 self.log("Showed \(type) consent dialog", level: .info)
                 completion(true)
@@ -431,7 +431,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
             guard let self else { return }
 
             self.log("Received Usercentrics consent update", level: .info)
-            self.log("Update payload:\n\(payload)", level: .trace)
+            self.log("Update payload:\n\(payload)", level: .verbose)
 
             // We discard the payload and just pull all the info directly from the SDK.
             // The result should be the same, we do this to simplify our implementation and prevent
