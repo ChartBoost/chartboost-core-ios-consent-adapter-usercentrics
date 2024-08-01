@@ -1,16 +1,9 @@
 name: Release
-
 on:
-  # Manual trigger from the Github Actions tab
   workflow_dispatch:
-
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUBSERVICETOKEN }}
-  COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
-  CHARTBOOST_PLATFORM: 'Core'
-
 jobs:
-  release-adapter:
+  dummy:
     runs-on: macos-latest
     steps:
-      - uses: chartboost/chartboost-ios-adapter-actions/release-adapter@v1
+      - name: Dummy
+        run: exit 1

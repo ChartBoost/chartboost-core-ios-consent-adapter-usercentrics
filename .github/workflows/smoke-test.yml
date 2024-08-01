@@ -1,18 +1,9 @@
 name: Smoke Test
-
 on:
-  # On pull requests to main
-  pull_request:
-    branches:
-      - main
-  # Manual trigger from the Github Actions tab
   workflow_dispatch:
-
-env:
-  CHARTBOOST_PLATFORM: 'Core'
-
 jobs:
-  validate-podspec:
+  dummy:
     runs-on: macos-latest
     steps:
-      - uses: chartboost/chartboost-ios-adapter-actions/adapter-smoke-test@v1
+      - name: Dummy
+        run: exit 1

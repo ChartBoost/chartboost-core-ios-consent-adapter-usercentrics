@@ -6,10 +6,10 @@ The Chartboost Core Usercentrics adapter mediates Usercentrics via the Chartboos
 
 | Plugin | Version |
 | ------ | ------ |
-| Chartboost Core SDK | 0.0.0+ |
+| Chartboost Core SDK | 1.0.0+ |
 | Cocoapods | 1.11.3+ |
-| iOS | 11.0+ |
-| Xcode | 14.1+ |
+| iOS | 13.0+ |
+| Xcode | 15.0+ |
 
 ## Integration
 
