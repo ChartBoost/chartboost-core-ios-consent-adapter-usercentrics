@@ -39,7 +39,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "1.2.14.0.0"
+    public let moduleVersion = "1.2.15.0.0"
 
     /// The delegate to be notified whenever any change happens in the CMP consent info.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
@@ -232,27 +232,42 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     public func resetConsent(completion: @escaping (_ succeeded: Bool) -> Void) {
         // Reset all consents
         log("Resetting consent", level: .debug)
-        UsercentricsCore.reset()
 
-        // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
-        // We do not report a consent change to the delegate here to prevent a call with "unknown" status
-        // followed immediately by another one with "granted"/"denied" status once the new consent info is
-        // fetched from Usercentrics in the next line.
-        // We do keep track of the original cached info to trigger the proper callbacks afterwards.
-        let previousConsentInfo = cachedConsentInfo
-        clearCachedConsentInfo(reportingChanges: false, comparingTo: previousConsentInfo)
+        // First check if Usercentrics is initialized or not, since trying to reset when not initialized leads to a crash
+        UsercentricsCore.isReady(onSuccess: { [weak self] _ in
+            guard let self else { return }
 
-        // Usercentrics needs to be configured again after a call to `reset()`, thus we pass `isFirstInitialization` to true.
-        // We pass the original consent info before it got cleared so it's used to compare against and trigger proper delegate calls
-        initializeAndUpdateConsentInfo(
-            reportingChanges: true,
-            isFirstInitialization: true,
-            comparingTo: previousConsentInfo
-        ) { [weak self] _ in
-            // Finish with success, since even if we failed to fetch the new info the SDK was reset.
-            self?.log("Reset consent", level: .info)
-            completion(true)
-        }
+            // Clear cached consent info. Usercentrics does not report updates triggered by programmatic changes.
+            // We do not report a consent change to the delegate here to prevent a call with "unknown" status
+            // followed immediately by another one with "granted"/"denied" status once the new consent info is
+            // fetched from Usercentrics in the next line.
+            // We do keep track of the original cached info to trigger the proper callbacks afterwards.
+            let previousConsentInfo = cachedConsentInfo
+            clearCachedConsentInfo(reportingChanges: false, comparingTo: previousConsentInfo)
+
+            // Reset Usercentrics
+            UsercentricsCore.shared.clearUserSession(onSuccess: { [weak self] _ in
+                guard let self else { return }
+                // Usercentrics needs to be configured again after a call to `reset()`, thus we pass `isFirstInitialization` to true.
+                // We pass the original consent info before it got cleared so it's used to compare against and trigger proper delegate calls
+                initializeAndUpdateConsentInfo(
+                    reportingChanges: true,
+                    isFirstInitialization: true,
+                    comparingTo: previousConsentInfo
+                ) { [weak self] _ in
+                    // Finish with success, since even if we failed to fetch the new info the SDK was reset.
+                    self?.log("Reset consent", level: .info)
+                    completion(true)
+                }
+            }, onError: { [weak self] error in
+                self?.log("Reset failed with error: \(error)", level: .error)
+                completion(false)
+            })
+        }, onFailure: { [weak self] _ in
+            // SDK not initialized: do nothing
+            self?.log("Reset skipped: Usercentrics is not initialized", level: .info)
+            completion(false)
+        })
     }
 
     /// Instructs the CMP to present a consent dialog to the user for the purpose of collecting consent.
