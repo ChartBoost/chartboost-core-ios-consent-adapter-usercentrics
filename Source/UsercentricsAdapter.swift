@@ -39,7 +39,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "1.2.15.0.0"
+    public let moduleVersion = "1.2.16.0.0"
 
     /// The delegate to be notified whenever any change happens in the CMP consent info.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
@@ -415,14 +415,28 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
         default:
             loggerLevel = .debug
         }
+        let domains: UsercentricsDomains?
+        if let domainsDict = dictionary["domains"] as? [String: Any] {
+            domains = UsercentricsDomains(
+                aggregatorCdnUrl: domainsDict["aggregatorCdnUrl"] as? String ?? "",
+                cdnUrl: domainsDict["cdnUrl"] as? String ?? "",
+                analyticsUrl: domainsDict["analyticsUrl"] as? String ?? "",
+                saveConsentsUrl: domainsDict["saveConsentsUrl"] as? String ?? "",
+                getConsentsUrl: domainsDict["getConsentsUrl"] as? String ?? ""
+            )
+        } else {
+            domains = nil
+        }
         return UsercentricsOptions(
             settingsId: dictionary["settingsId"] as? String ?? "",
             defaultLanguage: dictionary["defaultLanguage"] as? String ?? "en",
             version: dictionary["version"] as? String ?? "latest",
-            timeoutMillis: dictionary["timeoutMillis"] as? Int64 ?? 5000,
+            timeoutMillis: dictionary["timeoutMillis"] as? Int64 ?? 10_000,
             loggerLevel: loggerLevel,
             ruleSetId: dictionary["ruleSetId"] as? String ?? "",
-            consentMediation: dictionary["consentMediation"] as? Bool ?? false
+            consentMediation: dictionary["consentMediation"] as? Bool ?? false,
+            domains: domains,
+            initTimeoutMillis: dictionary["initTimeoutMillis"] as? Int64 ?? 10_000
         )
     }
 
