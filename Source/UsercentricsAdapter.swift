@@ -1,9 +1,10 @@
-// Copyright 2023-2025 Chartboost, Inc.
+// Copyright 2023-2026 Chartboost, Inc.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
 import ChartboostCoreSDK
+import UIKit
 import Usercentrics
 import UsercentricsUI
 
@@ -39,7 +40,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "1.2.24.0.0"
+    public let moduleVersion = "1.2.25.0.0"
 
     /// The delegate to be notified whenever any change happens in the CMP consent info.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
