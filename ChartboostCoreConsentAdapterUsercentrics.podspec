@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name        = 'ChartboostCoreConsentAdapterUsercentrics'
-  spec.version     = '1.2.27.0.0'
+  spec.version     = '1.2.28.0.0'
   spec.license     = { :type => 'MIT', :file => 'LICENSE.md' }
   spec.homepage    = 'https://github.com/ChartBoost/chartboost-core-ios-consent-adapter-usercentrics'
   spec.authors     = { 'Chartboost' => 'https://www.chartboost.com/' }
@@ -11,6 +11,7 @@ Pod::Spec.new do |spec|
   spec.module_name  = 'ChartboostCoreConsentAdapterUsercentrics'
   spec.source       = { :git => 'https://github.com/ChartBoost/chartboost-core-ios-consent-adapter-usercentrics.git', :tag => spec.version }
   spec.source_files = 'Source/**/*.{swift}'
+  spec.resource_bundles = {}
 
   # Minimum supported versions
   spec.swift_version         = '5.3'
@@ -18,13 +19,10 @@ Pod::Spec.new do |spec|
 
   # System frameworks used
   spec.ios.frameworks = ['Foundation', 'UIKit']
-  
-  # This adapter is compatible with Chartboost Core 1.0+ versions of the SDK.
+
+  # Dependencies
   spec.dependency 'ChartboostCoreSDK', '~> 1.0'
+  spec.dependency 'UsercentricsUI', '~> 2.28.0'
 
-  # CMP SDK and version that this adapter is certified to work with.
-  spec.dependency 'UsercentricsUI', '~> 2.27.0'
-
-  # The CMP SDK is a static framework which requires the static_framework option.
   spec.static_framework = true
 end
