@@ -40,7 +40,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "1.2.28.0.0"
+    public let moduleVersion = "1.2.29.0.0"
 
     /// The delegate to be notified whenever any change happens in the CMP consent info.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
@@ -215,8 +215,11 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
                 completion(false)
                 return
             }
-            // Deny consent
-            UsercentricsCore.shared.denyAll(consentType: self.usercentricsConsentType(from: source))
+            // Deny consent.
+            UsercentricsCore.shared.denyAll(
+                consentType: self.usercentricsConsentType(from: source),
+                unsavedServiceDecisions: nil
+            )
             self.log("Denied consent", level: .info)
 
             // Fetch consent info again. Usercentrics does not report updates triggered by programmatic changes.
