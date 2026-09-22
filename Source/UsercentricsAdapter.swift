@@ -40,7 +40,7 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
     public let moduleID = "usercentrics"
 
     /// The version of the module.
-    public let moduleVersion = "1.2.30.0.0"
+    public let moduleVersion = "1.2.31.0.0"
 
     /// The delegate to be notified whenever any change happens in the CMP consent info.
     /// This delegate is set by Core SDK and is an essential communication channel between Core and the CMP.
@@ -421,26 +421,43 @@ public final class UsercentricsAdapter: NSObject, Module, ConsentAdapter {
         }
         let domains: UsercentricsDomains?
         if let domainsDict = dictionary["domains"] as? [String: Any] {
+            let aggregatorCdnUrl: String = domainsDict["aggregatorCdnUrl"] as? String ?? ""
+            let cdnUrl: String = domainsDict["cdnUrl"] as? String ?? ""
+            let analyticsUrl: String = domainsDict["analyticsUrl"] as? String ?? ""
+            let saveConsentsUrl: String = domainsDict["saveConsentsUrl"] as? String ?? ""
+            let getConsentsUrl: String = domainsDict["getConsentsUrl"] as? String ?? ""
             domains = UsercentricsDomains(
-                aggregatorCdnUrl: domainsDict["aggregatorCdnUrl"] as? String ?? "",
-                cdnUrl: domainsDict["cdnUrl"] as? String ?? "",
-                analyticsUrl: domainsDict["analyticsUrl"] as? String ?? "",
-                saveConsentsUrl: domainsDict["saveConsentsUrl"] as? String ?? "",
-                getConsentsUrl: domainsDict["getConsentsUrl"] as? String ?? ""
+                aggregatorCdnUrl: aggregatorCdnUrl,
+                cdnUrl: cdnUrl,
+                analyticsUrl: analyticsUrl,
+                saveConsentsUrl: saveConsentsUrl,
+                getConsentsUrl: getConsentsUrl
             )
         } else {
             domains = nil
         }
+        // Extracted into explicitly-typed locals so the initializer call below is a simple
+        // list of names rather than a chain of `as? T ?? default` expressions, which keeps
+        // type-checking fast and any future signature mismatch reported precisely.
+        let settingsId: String = dictionary["settingsId"] as? String ?? ""
+        let defaultLanguage: String = dictionary["defaultLanguage"] as? String ?? "en"
+        let version: String = dictionary["version"] as? String ?? "latest"
+        let timeoutMillis: Int64 = dictionary["timeoutMillis"] as? Int64 ?? 10_000
+        let ruleSetId: String = dictionary["ruleSetId"] as? String ?? ""
+        let consentMediation: Bool = dictionary["consentMediation"] as? Bool ?? false
+        let initTimeoutMillis: Int64 = dictionary["initTimeoutMillis"] as? Int64 ?? 10_000
+        let controllerId: String? = dictionary["controllerId"] as? String
         return UsercentricsOptions(
-            settingsId: dictionary["settingsId"] as? String ?? "",
-            defaultLanguage: dictionary["defaultLanguage"] as? String ?? "en",
-            version: dictionary["version"] as? String ?? "latest",
-            timeoutMillis: dictionary["timeoutMillis"] as? Int64 ?? 10_000,
+            settingsId: settingsId,
+            defaultLanguage: defaultLanguage,
+            version: version,
+            timeoutMillis: timeoutMillis,
             loggerLevel: loggerLevel,
-            ruleSetId: dictionary["ruleSetId"] as? String ?? "",
-            consentMediation: dictionary["consentMediation"] as? Bool ?? false,
+            ruleSetId: ruleSetId,
+            consentMediation: consentMediation,
             domains: domains,
-            initTimeoutMillis: dictionary["initTimeoutMillis"] as? Int64 ?? 10_000
+            initTimeoutMillis: initTimeoutMillis,
+            controllerId: controllerId
         )
     }
 
